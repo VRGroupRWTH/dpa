@@ -1,0 +1,10 @@
+{
+  "dataset_filepath"               : "C:/development/data/msa/msa_converted.h5",
+  "dataset_name"                   : "vectors",
+  "dataset_spacing_name"           : "spacing",
+  "seed_generation_stride"         : [ 16, 16, 16 ],
+  "seed_generation_iterations"     : 1000,
+  "particle_advector_integrator"   : "runge_kutta_4",
+  "particle_advector_load_balancer": "local",
+  "particle_advector_step_size"    : "0.1"
+}
