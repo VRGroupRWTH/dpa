@@ -65,7 +65,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
         saver.save_integral_curves(integral_curves);
       }
     });
-  }, 10);
+  }, 1);
   benchmark_session.gather();
   benchmark_session.to_csv(arguments.output_dataset_filepath + ".benchmark.csv");
   return 0;

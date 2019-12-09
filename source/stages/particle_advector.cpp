@@ -2,6 +2,9 @@
 
 #include <tbb/tbb.h>
 
+#undef min
+#undef max
+
 namespace dpa
 {
 particle_advector::particle_advector(domain_partitioner* partitioner, const std::string& load_balancer, const std::string& integrator, const scalar step_size, const bool record)
@@ -27,7 +30,7 @@ integral_curves_3d particle_advector::advect(const std::unordered_map<relative_d
   integral_curves_3d integral_curves;
 
   auto total_iterations = seeds.at(0).remaining_iterations;
-  integral_curves.resize(seeds.size() * total_iterations, vector3(-1, -1, -1));
+  integral_curves.resize(seeds.size() * total_iterations, vector3(-2, -2, -2));
 
   tbb::parallel_for(std::size_t(0), seeds.size(), std::size_t(1), [&] (const std::size_t particle_index)
   {
@@ -41,6 +44,8 @@ integral_curves_3d particle_advector::advect(const std::unordered_map<relative_d
     integral_curves[particle_index * total_iterations] = particle.position;
     for (std::size_t iteration_index = 1; iteration_index < particle.remaining_iterations; ++iteration_index)
     {
+      integral_curves[particle_index * total_iterations + iteration_index] = vector3(-1, -1, -1);
+
       if (!center.contains(particle.position))
         break;
 
@@ -71,8 +76,9 @@ integral_curves_3d particle_advector::advect(const std::unordered_map<relative_d
 
       integral_curves[particle_index * total_iterations + iteration_index] = particle.position;
     }
-
   });
+  integral_curves.erase(std::remove(integral_curves.begin(), integral_curves.end(), vector3(-2, -2, -2)), integral_curves.end());
+
   return integral_curves;
 }
 }

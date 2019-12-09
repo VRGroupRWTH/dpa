@@ -39,7 +39,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
       if (index     > 1                      && integral_curves[index - 1] != vector3(-1, -1, -1))
         tangent = (integral_curves[index    ] - integral_curves[index - 1]).normalized();
       if (index + 1 < integral_curves.size() && integral_curves[index + 1] != vector3(-1, -1, -1))
-        tangent = ((tangent + (integral_curves[index + 1] - integral_curves[index    ]).normalized()) / scalar(2)).normalized();
+        tangent = ((tangent + (integral_curves[index + 1] - integral_curves[index]).normalized()) / scalar(2)).normalized();
 
       colors[index] = std::array<std::uint8_t, 4>
       {
@@ -66,26 +66,31 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
   std::vector<std::size_t> partial_index_counts (partitioner_->cartesian_communicator()->size());
   boost::mpi::all_gather(*partitioner_->cartesian_communicator(), integral_curves.size(), partial_vertex_counts);
   boost::mpi::all_gather(*partitioner_->cartesian_communicator(), indices        .size(), partial_index_counts );
-  auto global_vertex_count    = std::accumulate(partial_vertex_counts.begin(), partial_vertex_counts.end  (), std::size_t(0));
-  auto global_index_count     = std::accumulate(partial_index_counts .begin(), partial_index_counts .end  (), std::size_t(0));
-  auto local_vertex_offset    = std::accumulate(partial_vertex_counts.begin(), partial_vertex_counts.begin() + partitioner_->cartesian_communicator()->rank(), std::size_t(0));
-  auto local_index_offset     = std::accumulate(partial_index_counts .begin(), partial_index_counts .begin() + partitioner_->cartesian_communicator()->rank(), std::size_t(0));
-  auto local_vertex_count     = std::size_t(integral_curves.size());
-  auto local_index_count      = std::size_t(indices.size());
+  auto global_vertex_count    = 3 * 4 * std::accumulate(partial_vertex_counts.begin(), partial_vertex_counts.end  (), std::size_t(0));
+  auto global_color_count     = 4 * 1 * std::accumulate(partial_vertex_counts.begin(), partial_vertex_counts.end  (), std::size_t(0));
+  auto global_index_count     = 1 * 4 * std::accumulate(partial_index_counts .begin(), partial_index_counts .end  (), std::size_t(0));
+  auto local_vertex_offset    = 3 * 4 * std::accumulate(partial_vertex_counts.begin(), partial_vertex_counts.begin() + partitioner_->cartesian_communicator()->rank(), std::size_t(0));
+  auto local_color_offset     = 4 * 1 * std::accumulate(partial_vertex_counts.begin(), partial_vertex_counts.begin() + partitioner_->cartesian_communicator()->rank(), std::size_t(0));
+  auto local_index_offset     = 1 * 4 * std::accumulate(partial_index_counts .begin(), partial_index_counts .begin() + partitioner_->cartesian_communicator()->rank(), std::size_t(0));
+  auto local_vertex_count     = 3 * 4 * std::size_t(integral_curves.size());
+  auto local_color_count      = 4 * 1 * std::size_t(integral_curves.size());
+  auto local_index_count      = 1 * 4 * std::size_t(indices.size());
   auto local_stride           = std::size_t(1);
 
   const auto vertices_space   = H5Screate_simple(1, &global_vertex_count, nullptr);
+  const auto colors_space     = H5Screate_simple(1, &global_color_count , nullptr);
   const auto indices_space    = H5Screate_simple(1, &global_index_count , nullptr);
   const auto vertices_dataset = H5Dcreate2(file_, "vertices", H5T_NATIVE_FLOAT , vertices_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  const auto colors_dataset   = H5Dcreate2(file_, "colors"  , H5T_NATIVE_UINT8 , vertices_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  const auto colors_dataset   = H5Dcreate2(file_, "colors"  , H5T_NATIVE_UINT8 , colors_space  , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   const auto indices_dataset  = H5Dcreate2(file_, "indices" , H5T_NATIVE_UINT32, indices_space , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   const auto property         = H5Pcreate (H5P_DATASET_XFER);
 
   H5Pset_dxpl_mpio   (property, H5FD_MPIO_COLLECTIVE);
   H5Sselect_hyperslab(vertices_space, H5S_SELECT_SET, &local_vertex_offset, &local_stride, &local_vertex_count, nullptr);
+  H5Sselect_hyperslab(colors_space  , H5S_SELECT_SET, &local_color_offset , &local_stride, &local_color_count , nullptr);
   H5Sselect_hyperslab(indices_space , H5S_SELECT_SET, &local_index_offset , &local_stride, &local_index_count , nullptr);
   H5Dwrite           (vertices_dataset, H5T_NATIVE_FLOAT , vertices_space, vertices_space, property, integral_curves.data()->data());
-  H5Dwrite           (colors_dataset  , H5T_NATIVE_UINT8 , vertices_space, vertices_space, property, colors         .data()->data());
+  H5Dwrite           (colors_dataset  , H5T_NATIVE_UINT8 , colors_space  , colors_space  , property, colors         .data()->data());
   H5Dwrite           (indices_dataset , H5T_NATIVE_UINT32, indices_space , indices_space , property, indices        .data());
 
   H5Pclose           (property);

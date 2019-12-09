@@ -1,5 +1,5 @@
 {
-  "input_dataset_filepath"         : "D:/root/data/pli/old_msa_0.1.h5",
+  "input_dataset_filepath"         : "C:/development/data/pli/msa/msa_old_0.1.h5",
   "input_dataset_name"             : "vectors",
   "input_dataset_spacing_name"     : "spacing",
   "seed_generation_stride"         : [ 4, 4, 4 ],
@@ -8,5 +8,5 @@
   "particle_advector_integrator"   : "runge_kutta_4",
   "particle_advector_step_size"    : 0.1,
   "particle_advector_record"       : true,
-  "output_dataset_filepath"        : "D:/root/data/pli/old_msa_0.1_integral_curves.h5"
+  "output_dataset_filepath"        : "C:/development/data/pli/msa/msa_old_0.1_integral_curves.h5"
 }

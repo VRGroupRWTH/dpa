@@ -10,8 +10,8 @@ namespace dpa
 {
 inline std::string create_xdmf(const std::string& dataset_name, const std::size_t vertex_count, const std::size_t index_count)
 {
-  std::string xdmf = R"(
-<?xml version ="1.0" ?>
+  std::string xdmf = 
+R"(<?xml version ="1.0" ?>
 <!DOCTYPE xdmf SYSTEM "Xdmf.dtd" []>
 <Xdmf Version="2.0">
   <Domain>
