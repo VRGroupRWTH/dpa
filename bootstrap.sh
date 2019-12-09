@@ -1,10 +1,10 @@
 #!/bin/sh
 
-if [ ! -d "build" ]; then mkdir build fi
+if [ ! -d "build" ]; then mkdir build; fi
 cd build
-if [ ! -d "vcpkg" ]; then git clone https://github.com/Microsoft/vcpkg.git fi
+if [ ! -d "vcpkg" ]; then git clone https://github.com/Microsoft/vcpkg.git; fi
 cd vcpkg
-if [ ! -f "vcpkg" ]; then ./bootstrap-vcpkg.sh fi
+if [ ! -f "vcpkg" ]; then ./bootstrap-vcpkg.sh; fi
 
 VCPKG_COMMAND=vcpkg install --recurse
 VCPKG_DEFAULT_TRIPLET=x64-linux
