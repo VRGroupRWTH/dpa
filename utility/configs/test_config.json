@@ -1,10 +1,12 @@
 {
-  "dataset_filepath"               : "C:/development/data/msa/msa_converted.h5",
-  "dataset_name"                   : "vectors",
-  "dataset_spacing_name"           : "spacing",
-  "seed_generation_stride"         : [ 16, 16, 16 ],
-  "seed_generation_iterations"     : 1000,
+  "input_dataset_filepath"         : "D:/root/data/pli/old_msa_0.1.h5",
+  "input_dataset_name"             : "vectors",
+  "input_dataset_spacing_name"     : "spacing",
+  "seed_generation_stride"         : [ 4, 4, 4 ],
+  "seed_generation_iterations"     : 500,
+  "particle_advector_load_balancer": "diffuse",
   "particle_advector_integrator"   : "runge_kutta_4",
-  "particle_advector_load_balancer": "local",
-  "particle_advector_step_size"    : "0.1"
+  "particle_advector_step_size"    : 0.1,
+  "particle_advector_record"       : true,
+  "output_dataset_filepath"        : "D:/root/data/pli/old_msa_0.1_integral_curves.h5"
 }

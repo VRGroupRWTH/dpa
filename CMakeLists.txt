@@ -1,6 +1,6 @@
 ##################################################    Project     ##################################################
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project               (dpa VERSION 1.0 LANGUAGES CXX)
+project               (dpa VERSION 1.0 LANGUAGES C CXX)
 list                  (APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set_property          (GLOBAL PROPERTY USE_FOLDERS ON)
 set                   (CMAKE_CXX_STANDARD 17)
@@ -44,9 +44,6 @@ set           (HDF5_PREFER_PARALLEL TRUE)
 find_package  (HDF5 REQUIRED)
 import_library(HDF5_INCLUDE_DIRS HDF5_C_LIBRARIES)
 list          (APPEND PROJECT_COMPILE_DEFINITIONS -DH5_USE_BOOST -DH5_BUILT_AS_DYNAMIC_LIB)
-
-find_package  (HighFive REQUIRED)
-list          (APPEND PROJECT_LIBRARIES HighFive)
 
 find_package  (MPI REQUIRED)
 import_library(MPI_C_INCLUDE_DIRS MPI_C_LIBRARIES)

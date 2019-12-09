@@ -165,7 +165,7 @@ public:
     const auto end   = std::chrono::high_resolution_clock::now();
 
     auto record = std::find_if(session_.records.begin(), session_.records.end(),
-      [&name] (const record<type>& record) { return record.name == name; });
+      [&name] (const dpa::record<type>& record) { return record.name == name; });
     if (record == session_.records.end())
     {
       session_.records.push_back({name, {std::vector<type>(iterations_)}});

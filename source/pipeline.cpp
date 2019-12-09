@@ -2,8 +2,9 @@
 
 #include <boost/mpi/environment.hpp>
 
+#include <dpa/benchmark/benchmark.hpp>
 #include <dpa/stages/argument_parser.hpp>
-#include <dpa/stages/cartesian_grid_loader.hpp>
+#include <dpa/stages/regular_grid_loader.hpp>
 #include <dpa/stages/domain_partitioner.hpp>
 #include <dpa/stages/integral_curve_saver.hpp>
 #include <dpa/stages/particle_advector.hpp>
@@ -14,47 +15,59 @@ namespace dpa
 std::int32_t pipeline::run(std::int32_t argc, char** argv)
 {
   boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::multiple);
-  
-  auto arguments   = argument_parser::parse(argv[1]);
-  auto partitioner = domain_partitioner    ();
-  auto loader      = cartesian_grid_loader (&partitioner, arguments.dataset_filepath, arguments.dataset_name, arguments.dataset_spacing_name);
-  partitioner.set_domain_size(loader.load_dimensions());
 
-  auto                           local_vector_field = loader.load_local_vector_field();
-  std::optional<vector_field_3d> positive_x_vector_field;
-  std::optional<vector_field_3d> negative_x_vector_field;
-  std::optional<vector_field_3d> positive_y_vector_field;
-  std::optional<vector_field_3d> negative_y_vector_field;
-  std::optional<vector_field_3d> positive_z_vector_field;
-  std::optional<vector_field_3d> negative_z_vector_field;
-  if (arguments.particle_advector_load_balancer == "local")
+  auto arguments         = argument_parser::parse(argv[1]);
+  auto benchmark_session = run_mpi<float, std::milli>([&] (session_recorder<float, std::milli>& recorder)
   {
-    positive_x_vector_field = loader.load_positive_x_vector_field();
-    negative_x_vector_field = loader.load_negative_x_vector_field();
-    positive_y_vector_field = loader.load_positive_y_vector_field();
-    negative_y_vector_field = loader.load_negative_y_vector_field();
-    positive_z_vector_field = loader.load_positive_z_vector_field();
-    negative_z_vector_field = loader.load_negative_z_vector_field();
-  }
+    auto partitioner     = domain_partitioner ();
+    auto loader          = regular_grid_loader(
+      &partitioner                        , 
+      arguments.input_dataset_filepath    , 
+      arguments.input_dataset_name        , 
+      arguments.input_dataset_spacing_name);
+    auto advector        = particle_advector(
+      &partitioner                             , 
+      arguments.particle_advector_load_balancer, 
+      arguments.particle_advector_integrator   ,
+      arguments.particle_advector_step_size    , 
+      arguments.particle_advector_record       );
 
-  auto seeds = uniform_seed_generator::generate(
-    local_vector_field.offset, 
-    local_vector_field.size, 
-    arguments.seed_generation_stride.array() * local_vector_field.spacing.array(), 
-    arguments.seed_generation_iterations, 
-    partitioner.communicator()->rank());
+    auto vector_fields   = std::unordered_map<relative_direction, regular_vector_field_3d>();
+    auto seeds           = std::vector<particle<vector3, integer>>();
+    auto integral_curves = integral_curves_3d();
 
-  auto advector = particle_advector(arguments.particle_advector_step_size, arguments.particle_advector_integrator);
-  advector.set_seeds        (seeds);
-  advector.set_vector_fields(local_vector_field, positive_x_vector_field, negative_x_vector_field, positive_y_vector_field, negative_y_vector_field, positive_z_vector_field, negative_z_vector_field); // Bad. Group to map.
-  advector.advect           (); // Register a callback and record the positions as integral_curve.
-
-  if (arguments.particle_advector_record)
-  {
-    integral_curve_saver saver;
-    saver.save(curves);
-  }
-
+    recorder.record("1.domain_partitioning", [&] ()
+    {
+      partitioner.set_domain_size(loader.load_dimensions());
+    });
+    recorder.record("2.data_loading"       , [&] ()
+    {
+      vector_fields = loader.load_vector_fields(arguments.particle_advector_load_balancer == "diffuse");
+    });
+    recorder.record("3.seed_generation"    , [&] ()
+    {
+      seeds = uniform_seed_generator::generate(
+        vector_fields[relative_direction::center].offset, 
+        vector_fields[relative_direction::center].size  , 
+        vector_fields[relative_direction::center].spacing.array() * arguments.seed_generation_stride.array(),
+        arguments.seed_generation_iterations, 
+        partitioner.cartesian_communicator()->rank());
+    });
+    recorder.record("4.particle_advection" , [&] ()
+    {
+      integral_curves = advector.advect(vector_fields, seeds); // TODO: Refine benchmarking.
+    });
+    recorder.record("5.data_saving"        , [&] ()
+    {
+      if (arguments.particle_advector_record)
+      {
+        integral_curve_saver saver(&partitioner, arguments.output_dataset_filepath);
+        saver.save_integral_curves(integral_curves);
+      }
+    });
+  }, 10);
+  benchmark_session.gather();
+  benchmark_session.to_csv(arguments.output_dataset_filepath + ".benchmark.csv");
   return 0;
 }
 }
