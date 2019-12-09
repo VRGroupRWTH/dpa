@@ -2,6 +2,9 @@
 #define DPA_BASIC_TYPES_HPP
 
 #define EIGEN_INITIALIZE_MATRICES_BY_ZERO
+#define EIGEN_USE_MKL 
+#define EIGEN_USE_MKL_ALL
+#define MKL_DIRECT_CALL
 
 #include <cstdint>
 

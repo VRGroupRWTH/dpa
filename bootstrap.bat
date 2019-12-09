@@ -7,7 +7,7 @@ cd vcpkg
 if not exist "vcpkg.exe" call bootstrap-vcpkg.bat
 
 set VCPKG_DEFAULT_TRIPLET=x64-windows
-vcpkg install --recurse boost-mpi boost-odeint boost-ublas catch2 Eigen3 hdf5[parallel] mpi nlohmann-json tbb
+vcpkg install --recurse boost-mpi boost-odeint boost-ublas catch2 Eigen3 hdf5[parallel] intel-mkl mpi nlohmann-json tbb
 cd ..
 
 cmake -Ax64 -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake ..
