@@ -75,6 +75,12 @@ integral_curves_3d particle_advector::advect(const std::unordered_map<relative_d
         std::get<adams_bashforth_moulton_2_integrator<vector3>>   (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
 
       integral_curves[particle_index * total_iterations + iteration_index] = particle.position;
+
+      if (iteration_index + 1 == particle.remaining_iterations)
+      {
+        integral_curves[particle_index * total_iterations + iteration_index] = vector3(-1, -1, -1);
+        break;
+      }
     }
   });
   integral_curves.erase(std::remove(integral_curves.begin(), integral_curves.end(), vector3(-2, -2, -2)), integral_curves.end());
