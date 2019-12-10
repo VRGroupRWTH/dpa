@@ -26,11 +26,12 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       arguments.input_dataset_name        , 
       arguments.input_dataset_spacing_name);
     auto advector        = particle_advector(
-      &partitioner                             , 
-      arguments.particle_advector_load_balancer, 
-      arguments.particle_advector_integrator   ,
-      arguments.particle_advector_step_size    , 
-      arguments.particle_advector_record       );
+      &partitioner                                   , 
+      arguments.particle_advector_particles_per_round,
+      arguments.particle_advector_load_balancer      , 
+      arguments.particle_advector_integrator         ,
+      arguments.particle_advector_step_size          , 
+      arguments.particle_advector_record             );
 
     auto vector_fields   = std::unordered_map<relative_direction, regular_vector_field_3d>();
     auto seeds           = std::vector<particle<vector3, integer>>();
@@ -60,10 +61,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     recorder.record("5.data_saving"        , [&] ()
     {
       if (arguments.particle_advector_record)
-      {
-        integral_curve_saver saver(&partitioner, arguments.output_dataset_filepath);
-        saver.save_integral_curves(integral_curves);
-      }
+        integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(integral_curves);
     });
   }, 1);
   benchmark_session.gather();

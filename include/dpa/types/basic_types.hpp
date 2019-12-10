@@ -31,6 +31,17 @@ using imatrix2 = Eigen::Matrix2f;
 using imatrix3 = Eigen::Matrix3f;
 using imatrix4 = Eigen::Matrix4f;
 
+template <typename type>
+type invalid_value ()
+{
+  return -1 * type::Ones();
+}
+template <typename type>
+type terminal_value()
+{
+  return -2 * type::Ones();
+}
+
 template <typename type, std::size_t dimensions>
 struct vector_traits
 {

@@ -7,10 +7,11 @@
 
 namespace dpa
 {
-particle_advector::particle_advector(domain_partitioner* partitioner, const std::string& load_balancer, const std::string& integrator, const scalar step_size, const bool record)
-: partitioner_(partitioner)
-, step_size_  (step_size)
-, record_     (record)
+particle_advector::particle_advector(domain_partitioner* partitioner, const integer particles_per_round, const std::string& load_balancer, const std::string& integrator, const scalar step_size, const bool record)
+: partitioner_        (partitioner)
+, particles_per_round_(particles_per_round)
+, step_size_          (step_size)
+, record_             (record)
 {
   if (load_balancer == "diffuse") load_balancer_ = load_balancer::diffuse;
   else                            load_balancer_ = load_balancer::none   ;
@@ -27,10 +28,12 @@ particle_advector::particle_advector(domain_partitioner* partitioner, const std:
 
 integral_curves_3d particle_advector::advect(const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, std::vector<particle<vector3, integer>>& seeds)
 {
+  // TODO: Implement the distribution, load balancing and confirm crossing (ghost zones).
+
   integral_curves_3d integral_curves;
 
   auto total_iterations = seeds.at(0).remaining_iterations;
-  integral_curves.resize(seeds.size() * total_iterations, vector3(-2, -2, -2));
+  integral_curves.resize(seeds.size() * total_iterations, invalid_value<vector3>());
 
   tbb::parallel_for(std::size_t(0), seeds.size(), std::size_t(1), [&] (const std::size_t particle_index)
   {
@@ -44,7 +47,7 @@ integral_curves_3d particle_advector::advect(const std::unordered_map<relative_d
     integral_curves[particle_index * total_iterations] = particle.position;
     for (std::size_t iteration_index = 1; iteration_index < particle.remaining_iterations; ++iteration_index)
     {
-      integral_curves[particle_index * total_iterations + iteration_index] = vector3(-1, -1, -1);
+      integral_curves[particle_index * total_iterations + iteration_index] = terminal_value<vector3>();
 
       if (!center.contains(particle.position))
         break;
@@ -78,12 +81,12 @@ integral_curves_3d particle_advector::advect(const std::unordered_map<relative_d
 
       if (iteration_index + 1 == particle.remaining_iterations)
       {
-        integral_curves[particle_index * total_iterations + iteration_index] = vector3(-1, -1, -1);
+        integral_curves[particle_index * total_iterations + iteration_index] = terminal_value<vector3>();
         break;
       }
     }
   });
-  integral_curves.erase(std::remove(integral_curves.begin(), integral_curves.end(), vector3(-2, -2, -2)), integral_curves.end());
+  integral_curves.erase(std::remove(integral_curves.begin(), integral_curves.end(), invalid_value<vector3>()), integral_curves.end());
 
   return integral_curves;
 }

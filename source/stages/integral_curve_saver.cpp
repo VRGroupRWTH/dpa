@@ -34,12 +34,12 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
   std::vector<std::array<std::uint8_t, 3>> colors(integral_curves.size(), std::array<std::uint8_t, 3>{0, 0, 0});
   tbb::parallel_for(std::size_t(0), integral_curves.size(), std::size_t(1), [&] (const std::size_t index)
   {
-    if (integral_curves[index] != vector3(-1, -1, -1))
+    if (integral_curves[index] != terminal_value<vector3>())
     {
       vector3 tangent;
-      if (index     > 1                      && integral_curves[index - 1] != vector3(-1, -1, -1))
+      if (index     > 1                      && integral_curves[index - 1] != terminal_value<vector3>())
         tangent = (integral_curves[index    ] - integral_curves[index - 1]).normalized();
-      if (index + 1 < integral_curves.size() && integral_curves[index + 1] != vector3(-1, -1, -1))
+      if (index + 1 < integral_curves.size() && integral_curves[index + 1] != terminal_value<vector3>())
         tangent = ((tangent + (integral_curves[index + 1] - integral_curves[index]).normalized()) / scalar(2)).normalized();
 
       colors[index] = std::array<std::uint8_t, 3>
@@ -54,7 +54,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
   std::vector<std::uint32_t> indices(2 * integral_curves.size(), std::numeric_limits<std::uint32_t>::max());
   tbb::parallel_for(std::size_t(0), integral_curves.size() - 1, std::size_t(1), [&] (const std::size_t index)
   {
-    if (integral_curves[index] != vector3(-1, -1, -1) && integral_curves[index + 1] != vector3(-1, -1, -1))
+    if (integral_curves[index] != terminal_value<vector3>() && integral_curves[index + 1] != terminal_value<vector3>())
     {
       indices[2 * index    ] = index;
       indices[2 * index + 1] = index + 1;
