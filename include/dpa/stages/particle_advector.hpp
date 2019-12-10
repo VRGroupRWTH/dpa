@@ -49,14 +49,14 @@ public:
 protected:
   friend pipeline; // For benchmarking of individual steps.
 
-  bool               check_completion        (                                                                                      const std::vector<particle<vector3, integer>>& particles                                                                         );
-  void               load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles                                                                         );
-  round_info         compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles, const integral_curves_3d& integral_curves                              );
-  void               allocate_integral_curves(                                                                                      const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves, const round_info& round_info);
-  void               advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves,       round_info& round_info);
-  void               load_balance_collect    (                                                                                                                                                                                                 round_info& round_info);
-  void               out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                            const round_info& round_info);
-  void               prune                   (                                                                                                                                                      integral_curves_3d& integral_curves                              );
+  bool               check_completion        (                                                                                      const std::vector<particle<vector3, integer>>& particles                                                                   );
+  void               load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles                                                                   );
+  round_info         compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles                                                                   );
+  void               allocate_integral_curves(                                                                                      const std::vector<particle<vector3, integer>>& particles, integral_curves_3d& integral_curves, const round_info& round_info);
+  void               advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, const std::vector<particle<vector3, integer>>& particles, integral_curves_3d& integral_curves,       round_info& round_info);
+  void               load_balance_collect    (                                                                                                                                                                                           round_info& round_info);
+  void               out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                      const round_info& round_info);
+  void               prune                   (                                                                                                                                                integral_curves_3d& integral_curves                              );
 
   domain_partitioner*        partitioner_         {};
   integer                    particles_per_round_ {};

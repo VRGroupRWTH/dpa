@@ -66,7 +66,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       });
       recorder.record("4.2." + std::to_string(rounds) + ".compute_round_info"      , [&] ()
       {
-        round_info =    advector.compute_round_info      (               particles, integral_curves            );
+        round_info =    advector.compute_round_info      (               particles                             );
       });
       recorder.record("4.3." + std::to_string(rounds) + ".allocate_integral_curves", [&] ()
       {
