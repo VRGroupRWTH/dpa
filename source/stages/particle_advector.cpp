@@ -46,14 +46,15 @@ integral_curves_3d            particle_advector::advect                  (const 
 bool                          particle_advector::check_completion        (                                                                                      const std::vector<particle<vector3, integer>>& particles                                                                   ) 
 { 
   std::vector<std::size_t> particle_sizes;
-  boost::mpi::gather   (*partitioner_->communicator(), particles.size(), particle_sizes, 0);
+  boost::mpi::gather   (*partitioner_->cartesian_communicator(), particles.size(), particle_sizes, 0);
   auto   complete = std::all_of(particle_sizes.begin(), particle_sizes.end(), std::bind(std::equal_to<std::size_t>(), std::placeholders::_1, 0));
-  boost::mpi::broadcast(*partitioner_->communicator(), complete, 0);
+  boost::mpi::broadcast(*partitioner_->cartesian_communicator(), complete, 0);
   return complete;
 }
 void                          particle_advector::load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles                                                                   ) 
-{                                                                                                                                                                                                                         
-
+{
+  if (load_balancer_ == load_balancer::none) return;
+  // TODO: Neighborhood collectives.
 }                                                                                                                                                                                                                         
 particle_advector::round_info particle_advector::compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles                                                                   ) 
 {
@@ -69,11 +70,11 @@ particle_advector::round_info particle_advector::compute_round_info      (      
   return round_info;
 }
 void                          particle_advector::allocate_integral_curves(                                                                                      const std::vector<particle<vector3, integer>>& particles, integral_curves_3d& integral_curves, const round_info& round_info) 
-{                                                                                                                                                                                                                         
-
+{
+  if (!record_) return;
 }                                                                                                                                                                                                                         
 void                          particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, const std::vector<particle<vector3, integer>>& particles, integral_curves_3d& integral_curves,       round_info& round_info) 
-{                                                                                                                                                                                                                         
+{
   //auto total_iterations = seeds.at(0).remaining_iterations;
   //integral_curves.resize(seeds.size() * total_iterations, invalid_value<vector3>());
   //
@@ -130,12 +131,13 @@ void                          particle_advector::advect                  (const 
   //});                                                                                                                                                                                                                
 }                                                                                                                                                                                                                         
 void                          particle_advector::load_balance_collect    (                                                                                                                                                                                           round_info& round_info) 
-{                                                                                                                                                                                                                         
-
+{
+  if (load_balancer_ == load_balancer::none) return;
+  // TODO: Neighborhood collectives.
 }                                                                                                                                                                                                                         
 void                          particle_advector::out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                      const round_info& round_info) 
-{                                                                                                                                                                                                                         
-
+{
+  // TODO: Neighborhood collectives.
 }                                                                                                                                                                                                                         
 void                          particle_advector::prune                   (                                                                                                                                                integral_curves_3d& integral_curves                              ) 
 { 
