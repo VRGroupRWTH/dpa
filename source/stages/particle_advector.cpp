@@ -26,10 +26,40 @@ particle_advector::particle_advector(domain_partitioner* partitioner, const inte
   else if (integrator == "adams_bashforth_moulton_2"   ) integrator_ = adams_bashforth_moulton_2_integrator   <vector3>();
 }
 
-integral_curves_3d particle_advector::advect(const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, std::vector<particle<vector3, integer>>& seeds)
+integral_curves_3d            particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& particles)
 {
-  // TODO: Implement the distribution, load balancing and confirm crossing (ghost zones).
+  integral_curves_3d integral_curves;
+  while (!check_completion(particles))
+  {
+                      load_balance_distribute (               particles                             );
+    auto round_info = compute_round_info      (               particles, integral_curves            );
+                      allocate_integral_curves(               particles, integral_curves, round_info);
+                      advect                  (vector_fields, particles, integral_curves, round_info);
+                      load_balance_collect    (                                           round_info);
+                      out_of_bounds_distribute(               particles,                  round_info);
+  }
+  prune (integral_curves);
+  return integral_curves;
+}
 
+bool                          particle_advector::check_completion        (                                                                                      const std::vector<particle<vector3, integer>>& particles                                                                         ) 
+{ 
+
+}
+void                          particle_advector::load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles                                                                         ) 
+{ 
+
+}
+particle_advector::round_info particle_advector::compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles, const integral_curves_3d& integral_curves                              ) 
+{ 
+
+}
+void                          particle_advector::allocate_integral_curves(                                                                                      const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves, const round_info& round_info) 
+{ 
+
+}
+void                          particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves,       round_info& round_info) 
+{ 
   integral_curves_3d integral_curves;
 
   auto total_iterations = seeds.at(0).remaining_iterations;
@@ -89,5 +119,17 @@ integral_curves_3d particle_advector::advect(const std::unordered_map<relative_d
   integral_curves.erase(std::remove(integral_curves.begin(), integral_curves.end(), invalid_value<vector3>()), integral_curves.end());
 
   return integral_curves;
+}
+void                          particle_advector::load_balance_collect    (                                                                                                                                                                                                 round_info& round_info) 
+{ 
+
+}
+void                          particle_advector::out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                            const round_info& round_info) 
+{ 
+
+}
+void                          particle_advector::prune                   (                                                                                                                                                      integral_curves_3d& integral_curves                              ) 
+{ 
+
 }
 }

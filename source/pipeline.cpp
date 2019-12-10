@@ -34,7 +34,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       arguments.particle_advector_record             );
 
     auto vector_fields   = std::unordered_map<relative_direction, regular_vector_field_3d>();
-    auto seeds           = std::vector<particle<vector3, integer>>();
+    auto particles       = std::vector<particle<vector3, integer>>();
     auto integral_curves = integral_curves_3d();
 
     recorder.record("1.domain_partitioning", [&] ()
@@ -47,23 +47,60 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     });
     recorder.record("3.seed_generation"    , [&] ()
     {
-      seeds = uniform_seed_generator::generate(
+      particles = uniform_seed_generator::generate(
         vector_fields[relative_direction::center].offset, 
         vector_fields[relative_direction::center].size  , 
         vector_fields[relative_direction::center].spacing.array() * arguments.seed_generation_stride.array(),
         arguments.seed_generation_iterations, 
         partitioner.cartesian_communicator()->rank());
     });
-    recorder.record("4.particle_advection" , [&] ()
+
+    integer rounds   = 0;
+    bool    complete = false;
+    while (!complete)
     {
-      integral_curves = advector.advect(vector_fields, seeds); // TODO: Refine benchmarking.
+      particle_advector::round_info round_info;
+      recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
+      {
+                        advector.load_balance_distribute (               particles                             );
+      });
+      recorder.record("4.2." + std::to_string(rounds) + ".compute_round_info"      , [&] ()
+      {
+        round_info =    advector.compute_round_info      (               particles, integral_curves            );
+      });
+      recorder.record("4.3." + std::to_string(rounds) + ".allocate_integral_curves", [&] ()
+      {
+                        advector.allocate_integral_curves(               particles, integral_curves, round_info);
+      });
+      recorder.record("4.4." + std::to_string(rounds) + ".advect"                  , [&] ()
+      {
+                        advector.advect                  (vector_fields, particles, integral_curves, round_info);
+      });
+      recorder.record("4.5." + std::to_string(rounds) + ".load_balance_collect"    , [&] ()
+      {
+                        advector.load_balance_collect    (                                           round_info);
+      });
+      recorder.record("4.6." + std::to_string(rounds) + ".out_of_bounds_distribute", [&] ()
+      {
+                        advector.out_of_bounds_distribute(               particles,                  round_info);
+      });
+      recorder.record("4.7." + std::to_string(rounds) + ".check_completion"        , [&] ()
+      {
+        complete =      advector.check_completion        (               particles);
+      });  
+      rounds++;
+    }
+    recorder.record("4.8.prune"    , [&] ()
+    {
+      advector.prune(integral_curves);
     });
-    recorder.record("5.data_saving"        , [&] ()
+    
+    recorder.record("5.data_saving", [&] ()
     {
       if (arguments.particle_advector_record)
         integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(integral_curves);
     });
-  }, 1);
+  }, 10);
   benchmark_session.gather();
   benchmark_session.to_csv(arguments.output_dataset_filepath + ".benchmark.csv");
   return 0;

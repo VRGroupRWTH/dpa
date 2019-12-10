@@ -17,6 +17,8 @@
 
 namespace dpa
 {
+class pipeline;
+
 class particle_advector
 {
 public:
@@ -33,7 +35,6 @@ public:
     std::size_t  maximum_remaining_iterations    ;
     particle_map out_of_bounds_particles         ;
     particle_map neighbor_out_of_bounds_particles;
-
   };
 
   explicit particle_advector  (domain_partitioner* partitioner, const integer particles_per_round, const std::string& load_balancer, const std::string& integrator, const scalar step_size, const bool record);
@@ -43,19 +44,20 @@ public:
   particle_advector& operator=(const particle_advector&  that) = delete ;
   particle_advector& operator=(      particle_advector&& temp) = default;
 
-  integral_curves_3d advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, std::vector<particle<vector3, integer>>& seeds);
+  integral_curves_3d advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& particles);
   
-  round_info         compute_round_info      (const std::vector<particle<vector3, integer>>& particles, const integral_curves_3d& integral_curves                              );
-  void               allocate_integral_curves(const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves, const round_info& round_info);
-  void               advect                  (const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves,       round_info& round_info);
-  void               out_of_bounds_distribute(      std::vector<particle<vector3, integer>>& particles,                                            const round_info& round_info);
-  bool               check_completion        (const std::vector<particle<vector3, integer>>& particles                                                                         );
-  void               prune                   (                                                                integral_curves_3d& integral_curves                              );
-
-  void               load_balance_distribute (      std::vector<particle<vector3, integer>>& particles                                                                         );
-  void               load_balance_collect    (                                                                                                           round_info& round_info);
-
 protected:
+  friend pipeline; // For benchmarking of individual steps.
+
+  bool               check_completion        (                                                                                      const std::vector<particle<vector3, integer>>& particles                                                                         );
+  void               load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles                                                                         );
+  round_info         compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles, const integral_curves_3d& integral_curves                              );
+  void               allocate_integral_curves(                                                                                      const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves, const round_info& round_info);
+  void               advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields, const std::vector<particle<vector3, integer>>& particles,       integral_curves_3d& integral_curves,       round_info& round_info);
+  void               load_balance_collect    (                                                                                                                                                                                                 round_info& round_info);
+  void               out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                            const round_info& round_info);
+  void               prune                   (                                                                                                                                                      integral_curves_3d& integral_curves                              );
+
   domain_partitioner*        partitioner_         {};
   integer                    particles_per_round_ {};
   load_balancer              load_balancer_       {};
