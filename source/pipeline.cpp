@@ -30,12 +30,12 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       arguments.particle_advector_particles_per_round,
       arguments.particle_advector_load_balancer      , 
       arguments.particle_advector_integrator         ,
-      arguments.particle_advector_step_size          , 
+      arguments.particle_advector_step_size          ,
+      arguments.particle_advector_gather_particles   ,
       arguments.particle_advector_record             );
 
     auto vector_fields   = std::unordered_map<relative_direction, regular_vector_field_3d>();
     auto particles       = std::vector<particle<vector3, integer>>();
-    auto integral_curves = integral_curves_3d();
 
     recorder.record("1.domain_partitioning", [&] ()
     {
@@ -55,50 +55,55 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
         partitioner.cartesian_communicator()->rank());
     });
 
-    integer rounds   = 0;
-    bool    complete = false;
+    particle_advector::output output   = {};
+    integer                   rounds   = 0;
+    bool                      complete = false;
     while (!complete)
     {
       particle_advector::round_info round_info;
       recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
       {
-                        advector.load_balance_distribute (               particles                             );
+                        advector.load_balance_distribute (               particles                                                      );
       });
       recorder.record("4.2." + std::to_string(rounds) + ".compute_round_info"      , [&] ()
       {
-        round_info =    advector.compute_round_info      (               particles                             );
+        round_info =    advector.compute_round_info      (               particles,                   output.integral_curves            );
       });
       recorder.record("4.3." + std::to_string(rounds) + ".allocate_integral_curves", [&] ()
       {
-                        advector.allocate_integral_curves(               particles, integral_curves, round_info);
+                        advector.allocate_integral_curves(               particles,                   output.integral_curves, round_info);
       });
       recorder.record("4.4." + std::to_string(rounds) + ".advect"                  , [&] ()
       {
-                        advector.advect                  (vector_fields, particles, integral_curves, round_info);
+                        advector.advect                  (vector_fields, particles, output.particles, output.integral_curves, round_info);
       });
       recorder.record("4.5." + std::to_string(rounds) + ".load_balance_collect"    , [&] ()
       {
-                        advector.load_balance_collect    (                                           round_info);
+                        advector.load_balance_collect    (                                                                    round_info);
       });
       recorder.record("4.6." + std::to_string(rounds) + ".out_of_bounds_distribute", [&] ()
       {
-                        advector.out_of_bounds_distribute(               particles,                  round_info);
+                        advector.out_of_bounds_distribute(               particles,                                           round_info);
       });
       recorder.record("4.7." + std::to_string(rounds) + ".check_completion"        , [&] ()
       {
-        complete =      advector.check_completion        (               particles);
+        complete =      advector.check_completion        (               particles                                                      );
       });  
       rounds++;
     }
-    recorder.record("4.8.prune"    , [&] ()
+    recorder.record("4.8.gather_particles"     , [&] ()
     {
-      advector.prune(integral_curves);
+      advector.gather_particles     (output.particles);
+    });
+    recorder.record("4.9.prune_integral_curves", [&] ()
+    {
+      advector.prune_integral_curves(output.integral_curves);
     });
     
-    recorder.record("5.data_saving", [&] ()
+    recorder.record("5.data_saving"            , [&] ()
     {
       if (arguments.particle_advector_record)
-        integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(integral_curves);
+        integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(output.integral_curves);
     });
   }, 10);
   benchmark_session.gather();

@@ -19,7 +19,7 @@ struct regular_grid
   using index_type  = std::array<std::size_t, dimensions>;
 
   // Ducks [] on the domain_type.
-  bool         contains   (const domain_type& position)
+  bool         contains   (const domain_type& position) const
   {
     for (std::size_t i = 0; i < dimensions; ++i)
     {
@@ -30,7 +30,7 @@ struct regular_grid
     return true;
   }
   // Ducks [] on the domain_type.
-  element_type interpolate(const domain_type& position)
+  element_type interpolate(const domain_type& position) const
   {
     domain_type weights    ;
     index_type  start_index;

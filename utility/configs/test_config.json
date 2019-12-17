@@ -8,6 +8,7 @@
   "particle_advector_load_balancer"      : "diffuse",
   "particle_advector_integrator"         : "runge_kutta_4",
   "particle_advector_step_size"          : 0.1,
+  "particle_advector_gather_particles"   : true,
   "particle_advector_record"             : true,
   "output_dataset_filepath"              : "D:/root/data/pli/old_msa_0.1_integral_curves.h5"
 }
