@@ -2,7 +2,7 @@
   "input_dataset_filepath"               : "D:/root/data/pli/old_msa_0.1.h5",
   "input_dataset_name"                   : "vectors",
   "input_dataset_spacing_name"           : "spacing",
-  "seed_generation_stride"               : [ 1, 1, 1 ],
+  "seed_generation_stride"               : [ 8, 8, 1 ],
   "seed_generation_iterations"           : 1000,
   "particle_advector_particles_per_round": 1000,
   "particle_advector_load_balancer"      : "diffuse",

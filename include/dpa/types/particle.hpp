@@ -20,7 +20,7 @@ struct particle
     archive & position[2];
     archive & remaining_iterations;
     archive & original_rank;
-    archive & static_cast<std::uint32_t>(relative_direction);
+    archive & relative_direction;
   }
 
   position_type      position             = {};

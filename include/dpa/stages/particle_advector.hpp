@@ -32,17 +32,17 @@ public:
   {
     using particle_map = tbb::concurrent_hash_map<relative_direction, std::vector<particle<vector3, integer>>>;
 
-    std::size_t  maximum_remaining_iterations    ;
-    std::size_t  particle_count                  ;
-    std::size_t  vertex_offset                   ;
-    std::size_t  vertex_count                    ;
-    particle_map out_of_bounds_particles         ;
-    particle_map neighbor_out_of_bounds_particles;
+    std::size_t  particle_count                   = 0;
+    std::size_t  curve_stride                     = 0;
+    std::size_t  vertex_offset                    = 0;
+    std::size_t  vertex_count                     = 0;
+    particle_map out_of_bounds_particles          {};
+    particle_map neighbor_out_of_bounds_particles {};
   };
   struct output
   {
-    std::vector<particle<vector3, integer>> particles      ;
-    integral_curves_3d                      integral_curves;
+    std::vector<particle<vector3, integer>> particles       {};
+    integral_curves_3d                      integral_curves {};
   };
 
   explicit particle_advector  (domain_partitioner* partitioner, const integer particles_per_round, const std::string& load_balancer, const std::string& integrator, const scalar step_size, const bool gather_particles, const bool record);
