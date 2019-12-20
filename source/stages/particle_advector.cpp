@@ -77,7 +77,7 @@ particle_advector::round_info particle_advector::compute_round_info      (      
   if (record_)
   {
     // Two more vertices per curve; one for initial position, one for termination vertex.
-    round_info.curve_stride  = std::max_element(particles.begin(), particles.begin() + round_info.particle_count, [ ] (const particle<vector3, integer>& lhs, const particle<vector3, integer>& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; })->remaining_iterations + 2;
+    round_info.curve_stride  = std::max_element(particles.end() - round_info.particle_count, particles.end(), [ ] (const particle<vector3, integer>& lhs, const particle<vector3, integer>& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; })->remaining_iterations + 2;
     round_info.vertex_offset = integral_curves.size();
     round_info.vertex_count  = round_info.particle_count * round_info.curve_stride;
   }
@@ -94,11 +94,7 @@ void                          particle_advector::allocate_integral_curves(      
 {
   if (!record_) return;
 
-  integral_curves.resize(integral_curves.size() + round_info.vertex_count);
-  tbb::parallel_for(std::size_t(0), round_info.particle_count, std::size_t(1), [&] (const std::size_t index)
-  {
-    integral_curves[round_info.vertex_offset + index * round_info.curve_stride] = particles[index].position;
-  });
+  integral_curves.resize(integral_curves.size() + round_info.vertex_count, invalid_value<vector3>());
 }
 void                          particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& particles, std::vector<particle<vector3, integer>>& inactive_particles,       integral_curves_3d& integral_curves,       round_info& round_info)
 {
@@ -111,6 +107,9 @@ void                          particle_advector::advect                  (const 
     auto  upper_bounds    = vector_field.offset + vector_field.size;
     auto  integrator      = integrator_;
     auto  iteration_index = 0;
+
+    if (record_)
+      integral_curves[round_info.vertex_offset + particle_index * round_info.curve_stride] = particle.position;
 
     for ( ; particle.remaining_iterations > 0; ++iteration_index, --particle.remaining_iterations)
     {
@@ -164,17 +163,16 @@ void                          particle_advector::advect                  (const 
         std::get<adams_bashforth_moulton_2_integrator<vector3>>   (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
       
       if (record_)
-        integral_curves[round_info.vertex_offset + particle_index * round_info.curve_stride + iteration_index + 1] = particle.position; // Offset one for initial position.
+        integral_curves[round_info.vertex_offset + particle_index * round_info.curve_stride + iteration_index + 1] = particle.position;
     }
+    if (record_)
+      integral_curves[round_info.vertex_offset + particle_index * round_info.curve_stride + iteration_index + 1] = terminal_value<vector3>();
 
     if (particle.remaining_iterations == 0)
     {
       tbb::mutex::scoped_lock lock(mutex);
       inactive_particles.push_back(particle);
     }
-
-    if (record_)
-      integral_curves[round_info.vertex_offset + particle_index * round_info.curve_stride + iteration_index + 2] = terminal_value<vector3>(); // Offset two for initial position and termination vertex.
   });
   particles.resize(particles.size() - round_info.particle_count);
 }

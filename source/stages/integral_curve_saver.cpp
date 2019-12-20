@@ -50,7 +50,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
       };
     }
   });
-  
+
   std::vector<std::uint32_t> indices(2 * integral_curves.size(), std::numeric_limits<std::uint32_t>::max());
   tbb::parallel_for(std::size_t(0), integral_curves.size() - 1, std::size_t(1), [&] (const std::size_t index)
   {
@@ -84,6 +84,11 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
   const auto colors_dataset   = H5Dcreate2(file_, "colors"  , H5T_NATIVE_UINT8 , colors_space  , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   const auto indices_dataset  = H5Dcreate2(file_, "indices" , H5T_NATIVE_UINT32, indices_space , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   const auto property         = H5Pcreate (H5P_DATASET_XFER);
+  
+  tbb::parallel_for(std::size_t(0), indices.size(), std::size_t(1), [&] (const std::size_t index)
+  {
+    indices[index] += local_index_offset;
+  });
 
   H5Pset_dxpl_mpio   (property, H5FD_MPIO_COLLECTIVE);
   H5Sselect_hyperslab(vertices_space, H5S_SELECT_SET, &local_vertex_element_offset, &local_stride, &local_vertex_element_count, nullptr);
@@ -100,7 +105,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
   H5Dclose           (colors_dataset  );
   H5Dclose           (indices_dataset );
 
-  std::ofstream file (filepath_ + ".xdmf");
+  std::ofstream file(filepath_ + ".xdmf");
   file << create_xdmf(std::filesystem::path(filepath_).filename().string(), global_vertex_element_count, global_color_element_count, global_index_count);
 }
 }

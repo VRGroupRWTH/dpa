@@ -99,13 +99,13 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     {
       advector.prune_integral_curves(output.integral_curves);
     });
-    
+
     recorder.record("5.data_saving"            , [&] ()
     {
       if (arguments.particle_advector_record)
         integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(output.integral_curves);
     });
-  }, 10);
+  }, 1);
   benchmark_session.gather();
   benchmark_session.to_csv(arguments.output_dataset_filepath + ".benchmark.csv");
   return 0;
