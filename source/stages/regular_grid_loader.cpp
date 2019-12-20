@@ -38,15 +38,15 @@ std::unordered_map<relative_direction, regular_vector_field_3d> regular_grid_loa
 
   auto partitions = partitioner_->partitions();
 
-  vector_fields.emplace(relative_direction::center, load_vector_field(partitions.at(relative_direction::center).offset, partitioner_->block_size()));
+  vector_fields.emplace(relative_direction::center, load_vector_field(partitions.at(relative_direction::center).ghosted_offset, partitions.at(relative_direction::center).ghosted_block_size));
   if (load_neighbors)
   {
-    if (partitions.find(relative_direction::negative_x) != partitions.end()) vector_fields.emplace(relative_direction::negative_x, load_vector_field(partitions.at(relative_direction::negative_x).offset, partitioner_->block_size()));
-    if (partitions.find(relative_direction::positive_x) != partitions.end()) vector_fields.emplace(relative_direction::positive_x, load_vector_field(partitions.at(relative_direction::positive_x).offset, partitioner_->block_size()));
-    if (partitions.find(relative_direction::negative_y) != partitions.end()) vector_fields.emplace(relative_direction::negative_y, load_vector_field(partitions.at(relative_direction::negative_y).offset, partitioner_->block_size()));
-    if (partitions.find(relative_direction::positive_y) != partitions.end()) vector_fields.emplace(relative_direction::positive_y, load_vector_field(partitions.at(relative_direction::positive_y).offset, partitioner_->block_size()));
-    if (partitions.find(relative_direction::negative_z) != partitions.end()) vector_fields.emplace(relative_direction::negative_z, load_vector_field(partitions.at(relative_direction::negative_z).offset, partitioner_->block_size()));
-    if (partitions.find(relative_direction::positive_z) != partitions.end()) vector_fields.emplace(relative_direction::positive_z, load_vector_field(partitions.at(relative_direction::positive_z).offset, partitioner_->block_size()));
+    if (partitions.find(relative_direction::negative_x) != partitions.end()) vector_fields.emplace(relative_direction::negative_x, load_vector_field(partitions.at(relative_direction::negative_x).ghosted_offset, partitions.at(relative_direction::negative_x).ghosted_block_size));
+    if (partitions.find(relative_direction::positive_x) != partitions.end()) vector_fields.emplace(relative_direction::positive_x, load_vector_field(partitions.at(relative_direction::positive_x).ghosted_offset, partitions.at(relative_direction::positive_x).ghosted_block_size));
+    if (partitions.find(relative_direction::negative_y) != partitions.end()) vector_fields.emplace(relative_direction::negative_y, load_vector_field(partitions.at(relative_direction::negative_y).ghosted_offset, partitions.at(relative_direction::negative_y).ghosted_block_size));
+    if (partitions.find(relative_direction::positive_y) != partitions.end()) vector_fields.emplace(relative_direction::positive_y, load_vector_field(partitions.at(relative_direction::positive_y).ghosted_offset, partitions.at(relative_direction::positive_y).ghosted_block_size));
+    if (partitions.find(relative_direction::negative_z) != partitions.end()) vector_fields.emplace(relative_direction::negative_z, load_vector_field(partitions.at(relative_direction::negative_z).ghosted_offset, partitions.at(relative_direction::negative_z).ghosted_block_size));
+    if (partitions.find(relative_direction::positive_z) != partitions.end()) vector_fields.emplace(relative_direction::positive_z, load_vector_field(partitions.at(relative_direction::positive_z).ghosted_offset, partitions.at(relative_direction::positive_z).ghosted_block_size));
   }
 
   return vector_fields;

@@ -39,7 +39,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
 
     recorder.record("1.domain_partitioning", [&] ()
     {
-      partitioner.set_domain_size(loader.load_dimensions());
+      partitioner.set_domain_size(loader.load_dimensions(), ivector3::Ones());
     });
     recorder.record("2.data_loading"       , [&] ()
     {
@@ -48,8 +48,8 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     recorder.record("3.seed_generation"    , [&] ()
     {
       particles = uniform_seed_generator::generate(
-        vector_fields[relative_direction::center].offset, 
-        vector_fields[relative_direction::center].size  , 
+        vector_fields[relative_direction::center].spacing.array() * partitioner.partitions().at(relative_direction::center).offset.cast<scalar>().array(),
+        vector_fields[relative_direction::center].spacing.array() * partitioner.block_size()                                      .cast<scalar>().array(), 
         vector_fields[relative_direction::center].spacing.array() * arguments.seed_generation_stride.array(),
         arguments.seed_generation_iterations, 
         partitioner.cartesian_communicator()->rank());

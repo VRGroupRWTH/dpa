@@ -164,6 +164,7 @@ void                          particle_advector::advect                  (const 
       if (record_)
         integral_curves.back()[particle_index * round_info.curve_stride + iteration_index + 1] = particle.position;
     }
+
     if (record_)
       integral_curves.back()[particle_index * round_info.curve_stride + iteration_index + 1] = terminal_value<vector3>();
 

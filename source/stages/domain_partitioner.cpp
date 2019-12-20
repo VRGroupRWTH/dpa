@@ -4,9 +4,10 @@
 
 namespace dpa
 {
-void                                                                         domain_partitioner::set_domain_size       (const ivector3& domain_size)
+void                                                                         domain_partitioner::set_domain_size       (const ivector3& domain_size, const ivector3& ghost_cell_size)
 {
-  domain_size_ = domain_size;
+  domain_size_     = domain_size;
+  ghost_cell_size_ = ghost_cell_size;
 
   auto prime_factors = prime_factorize(communicator_.size());
   auto current_size  = domain_size_;
@@ -75,6 +76,22 @@ domain_partitioner::partition                                                dom
   const auto raw_multi_rank = cartesian_communicator_->coordinates(rank);
   const auto multi_rank     = ivector3(raw_multi_rank[0], raw_multi_rank[1], raw_multi_rank[2]);
   const auto offset         = block_size_.array() * multi_rank.array();
-  return partition {rank, multi_rank, offset};
+
+  auto ghosted_offset = ivector3();
+  auto ghosted_size   = ivector3();
+  for (auto i = 0; i < 3; ++i)
+  {
+    if (offset[i] >= ghost_cell_size_ [i])
+      ghosted_offset[i] = offset[i] - ghost_cell_size_[i];
+    else
+      ghosted_offset[i] = 0;
+    
+    if (offset[i] + block_size_[i] + ghost_cell_size_[i] < domain_size_[i])
+      ghosted_size  [i] = block_size_ [i] + ghost_cell_size_[i];
+    else
+      ghosted_size  [i] = domain_size_[i] - offset[i];
+  }
+
+  return partition {rank, multi_rank, offset, ghosted_offset, ghosted_size};
 }
 }
