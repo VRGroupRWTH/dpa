@@ -34,7 +34,6 @@ public:
 
     std::size_t  particle_count                   = 0;
     std::size_t  curve_stride                     = 0;
-    std::size_t  vertex_offset                    = 0;
     std::size_t  vertex_count                     = 0;
     particle_map out_of_bounds_particles          {};
     particle_map neighbor_out_of_bounds_particles {};
