@@ -54,20 +54,20 @@ std::unordered_map<relative_direction, regular_vector_field_3d> regular_grid_loa
 
 regular_vector_field_3d                                         regular_grid_loader::load_vector_field (const ivector3& offset, const ivector3& size)
 {
-  const auto dimensions = load_dimensions();
-
-  regular_vector_field_3d vector_field {boost::multi_array<vector3, 3>(boost::extents[dimensions[0]][dimensions[1]][dimensions[2]])};
+  regular_vector_field_3d vector_field {boost::multi_array<vector3, 3>(boost::extents[size[0]][size[1]][size[2]])};
 
   const std::array<hsize_t, 4> native_offset {hsize_t(offset[0]), hsize_t(offset[1]), hsize_t(offset[2]), 0};
   const std::array<hsize_t, 4> native_size   {hsize_t(size  [0]), hsize_t(size  [1]), hsize_t(size  [2]), 3};
   const std::array<hsize_t, 4> native_stride {1, 1, 1, 1};
 
-  const auto space    = H5Dget_space(dataset_);
-  const auto property = H5Pcreate   (H5P_DATASET_XFER);
+  const auto space    = H5Dget_space    (dataset_);
+  const auto memspace = H5Screate_simple(4, native_size.data(), NULL);
+  const auto property = H5Pcreate       (H5P_DATASET_XFER);
   H5Pset_dxpl_mpio   (property, H5FD_MPIO_COLLECTIVE);
   H5Sselect_hyperslab(space, H5S_SELECT_SET, native_offset.data(), native_stride.data(), native_size.data(), nullptr);
-  H5Dread            (dataset_, H5T_NATIVE_FLOAT, space, space, property, vector_field.data.origin()->data());
+  H5Dread            (dataset_, H5T_NATIVE_FLOAT, memspace, space, property, vector_field.data.origin()->data());
   H5Pclose           (property);
+  H5Sclose           (memspace);
   H5Sclose           (space);
 
   H5Aread            (spacing_, H5T_NATIVE_FLOAT, vector_field.spacing.data());

@@ -57,7 +57,7 @@ integral_curve_saver::~integral_curve_saver()
 
 void integral_curve_saver::save_integral_curves(const integral_curves_3d& integral_curves, bool use_64_bit_indices)
 {
-  std::vector<std::string> xdmfs(integral_curves.size(), xdmf_body);
+  std::vector<std::string> xdmfs;
 
   for (auto curve_index = 0; curve_index < integral_curves.size(); ++curve_index)
   //tbb::parallel_for(std::size_t(0), integral_curves.size(), std::size_t(1), [&] (const std::size_t curve_index)
@@ -65,7 +65,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     auto& vertices = integral_curves[curve_index];
 
     if (vertices.empty())
-      return;
+      continue;
 
     std::vector<std::array<std::uint8_t, 3>> colors(vertices.size(), std::array<std::uint8_t, 3>{0, 0, 0});
     tbb::parallel_for(std::size_t(0), vertices.size(), std::size_t(1), [&] (const std::size_t vertex_index)
@@ -131,18 +131,19 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     H5Dclose(colors_dataset  );
     H5Dclose(indices_dataset );
     
-    boost::replace_all(xdmfs[curve_index], "$GRID_NAME"            , name_prefix);
-    boost::replace_all(xdmfs[curve_index], "$POLYLINE_COUNT"       , std::to_string(index_count / 2));
-    boost::replace_all(xdmfs[curve_index], "$FILEPATH"             , std::filesystem::path(filepath_).filename().string());
-    boost::replace_all(xdmfs[curve_index], "$INDICES_DATASET_NAME" , indices_name );
-    boost::replace_all(xdmfs[curve_index], "$VERTICES_DATASET_NAME", vertices_name);
-    boost::replace_all(xdmfs[curve_index], "$COLORS_DATASET_NAME"  , colors_name  );
-    boost::replace_all(xdmfs[curve_index], "$INDEX_ARRAY_SIZE"     , std::to_string(index_count));
-    boost::replace_all(xdmfs[curve_index], "$INDEX_PRECISION"      , use_64_bit_indices ? "8" : "4");
-    boost::replace_all(xdmfs[curve_index], "$VERTEX_ARRAY_SIZE"    , std::to_string(vertex_element_count));
+    auto& xdmf = xdmfs.emplace_back();
+    boost::replace_all(xdmf, "$GRID_NAME"            , name_prefix);
+    boost::replace_all(xdmf, "$POLYLINE_COUNT"       , std::to_string(index_count / 2));
+    boost::replace_all(xdmf, "$FILEPATH"             , std::filesystem::path(filepath_).filename().string());
+    boost::replace_all(xdmf, "$INDICES_DATASET_NAME" , indices_name );
+    boost::replace_all(xdmf, "$VERTICES_DATASET_NAME", vertices_name);
+    boost::replace_all(xdmf, "$COLORS_DATASET_NAME"  , colors_name  );
+    boost::replace_all(xdmf, "$INDEX_ARRAY_SIZE"     , std::to_string(index_count));
+    boost::replace_all(xdmf, "$INDEX_PRECISION"      , use_64_bit_indices ? "8" : "4");
+    boost::replace_all(xdmf, "$VERTEX_ARRAY_SIZE"    , std::to_string(vertex_element_count));
   //});
   }
-
+  
   std::ofstream stream(filepath_ + ".xdmf");
   stream << xdmf_preamble << std::accumulate(xdmfs.begin(), xdmfs.end(), std::string("")) << xdmf_postamble;
 }
