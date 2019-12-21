@@ -71,6 +71,29 @@ const std::unordered_map<relative_direction, domain_partitioner::partition>& dom
   return partitions_;
 }
 
+std::string                                                                  domain_partitioner::to_string             () const
+{
+  std::stringstream stream;
+  stream << "Rank            " << cartesian_communicator_->rank() << "\n";
+  stream << "Domain size     " << domain_size_    [0] << " " << domain_size_    [1] << " " << domain_size_    [2] << "\n";
+  stream << "Ghost cell size " << ghost_cell_size_[0] << " " << ghost_cell_size_[1] << " " << ghost_cell_size_[2] << "\n";
+  stream << "Grid size       " << grid_size_      [0] << " " << grid_size_      [1] << " " << grid_size_      [2] << "\n";
+  stream << "Block size      " << block_size_     [0] << " " << block_size_     [1] << " " << block_size_     [2] << "\n";
+  stream << "Partitions      " << "\n";
+  for (auto& partition : partitions_)
+  {
+    stream << "  Partition   " << std::uint32_t(partition.first) << "\n";
+    stream << "    Rank      " << partition.second.rank          << "\n";
+    stream << "    Multi rank" << ghost_cell_size_[0] << " " << ghost_cell_size_[1] << " " << ghost_cell_size_[2] << "\n";
+  }
+    
+    integer  rank               = 0 ;
+    ivector3 multi_rank         = {};
+    ivector3 offset             = {};
+    ivector3 ghosted_offset     = {};
+    ivector3 ghosted_block_size = {};
+}
+
 domain_partitioner::partition                                                domain_partitioner::setup_partition       (integer rank) const
 {
   const auto raw_multi_rank = cartesian_communicator_->coordinates(rank);

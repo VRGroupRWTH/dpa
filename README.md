@@ -20,4 +20,5 @@ Distributed particle advector based on TBB and MPI.
 ## Notes:
 - The input must consist of a 1D float spacing attribute and a 4D XYZV float dataset specified in the config file.
 - The output will be generated as an HDF5 file with one group per rank, each with one group per round, each consisting of two 1D float arrays for the vertices and colors and a 1D uint32/uint64 array for the indices.
+- The HDF5 files will be accompanied by one XDMF file per rank, containing all rounds.
 - When recording curves, if particles_per_round * iterations > maximum uint32_t, uint64_t indices are used.

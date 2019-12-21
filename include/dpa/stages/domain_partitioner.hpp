@@ -40,6 +40,8 @@ public:
   const ivector3&                                          block_size            () const;
   const std::unordered_map<relative_direction, partition>& partitions            () const;
 
+  std::string                                              to_string             () const;
+
 protected:
   partition                                                setup_partition       (integer rank) const;
 

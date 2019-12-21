@@ -14,7 +14,7 @@ namespace dpa
 {
 std::int32_t pipeline::run(std::int32_t argc, char** argv)
 {
-  boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::multiple);
+  boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::serialized);
 
   auto arguments         = argument_parser::parse(argv[1]);
   auto benchmark_session = run_mpi<float, std::milli>([&] (session_recorder<float, std::milli>& recorder)
@@ -103,7 +103,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     recorder.record("5.data_saving"            , [&] ()
     {
       if (arguments.particle_advector_record)
-        integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(output.integral_curves);
+        integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(output.integral_curves, (std::size_t(arguments.particle_advector_particles_per_round) * arguments.seed_generation_iterations) > std::numeric_limits<std::uint32_t>::max());
     });
   }, 1);
   benchmark_session.gather();
