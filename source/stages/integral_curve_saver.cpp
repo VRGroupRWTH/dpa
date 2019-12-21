@@ -131,7 +131,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     H5Dclose(colors_dataset  );
     H5Dclose(indices_dataset );
     
-    auto& xdmf = xdmfs.emplace_back();
+    auto& xdmf = xdmfs.emplace_back(xdmf_body);
     boost::replace_all(xdmf, "$GRID_NAME"            , name_prefix);
     boost::replace_all(xdmf, "$POLYLINE_COUNT"       , std::to_string(index_count / 2));
     boost::replace_all(xdmf, "$FILEPATH"             , std::filesystem::path(filepath_).filename().string());
