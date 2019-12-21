@@ -24,7 +24,7 @@ struct regular_grid
     for (std::size_t i = 0; i < dimensions; ++i)
     {
       const auto subscript = std::floor((position[i] - offset[i]) / spacing[i]);
-      if (std::size_t(0) > std::size_t(subscript) || std::size_t(subscript) >= std::size_t(data.shape()[i] - 1))
+      if (std::int64_t(0) > std::int64_t(subscript) || std::size_t(subscript) >= data.shape()[i] - 1)
         return false;
     }
     return true;

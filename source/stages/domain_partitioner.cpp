@@ -82,16 +82,14 @@ std::string                                                                  dom
   stream << "Partitions      " << "\n";
   for (auto& partition : partitions_)
   {
-    stream << "  Partition   " << std::uint32_t(partition.first) << "\n";
-    stream << "    Rank      " << partition.second.rank          << "\n";
-    stream << "    Multi rank" << ghost_cell_size_[0] << " " << ghost_cell_size_[1] << " " << ghost_cell_size_[2] << "\n";
+    stream << "  Partition            " << std::uint32_t(partition.first) << "\n";
+    stream << "    Rank               " << partition.second.rank          << "\n";
+    stream << "    Multi rank         " << partition.second.multi_rank        [0] << " " << partition.second.multi_rank        [1] << " " << partition.second.multi_rank        [2] << "\n";
+    stream << "    Offset             " << partition.second.offset            [0] << " " << partition.second.offset            [1] << " " << partition.second.offset            [2] << "\n";
+    stream << "    Ghosted offset     " << partition.second.ghosted_offset    [0] << " " << partition.second.ghosted_offset    [1] << " " << partition.second.ghosted_offset    [2] << "\n";
+    stream << "    Ghosted block size " << partition.second.ghosted_block_size[0] << " " << partition.second.ghosted_block_size[1] << " " << partition.second.ghosted_block_size[2] << "\n";
   }
-    
-    integer  rank               = 0 ;
-    ivector3 multi_rank         = {};
-    ivector3 offset             = {};
-    ivector3 ghosted_offset     = {};
-    ivector3 ghosted_block_size = {};
+  return stream.str();
 }
 
 domain_partitioner::partition                                                domain_partitioner::setup_partition       (integer rank) const
