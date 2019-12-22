@@ -8,45 +8,16 @@
 #include <boost/mpi.hpp>
 #include <tbb/tbb.h>
 
+#include <dpa/utility/xdmf.hpp>
+
 #undef min
 #undef max
 
 namespace dpa
 {
-const std::string xdmf_preamble  = R"(<?xml version ="1.0" ?>
-<!DOCTYPE xdmf SYSTEM "Xdmf.dtd" []>
-<Xdmf Version="2.0">
-  <Domain>
-)";
-const std::string xdmf_body      = R"(
-    <Grid Name="$GRID_NAME">
-
-      <Topology TopologyType="Polyline" NodesPerElement="2" NumberOfElements="$POLYLINE_COUNT">
-        <DataItem Dimensions="$INDEX_ARRAY_SIZE" NumberType="UInt" Precision="$INDEX_PRECISION" Format="HDF">
-          $FILEPATH:/$INDICES_DATASET_NAME
-        </DataItem>
-      </Topology>
-
-      <Geometry GeometryType="XYZ">
-        <DataItem Dimensions="$VERTEX_ARRAY_SIZE" NumberType="Float" Precision="4" Format="HDF">
-          $FILEPATH:/$VERTICES_DATASET_NAME
-        </DataItem>
-      </Geometry>
-
-      <Attribute Name="Colors" AttributeType="Vector" Center="Node">
-        <DataItem Dimensions="$VERTEX_ARRAY_SIZE" NumberType="UChar" Precision="1" Format="HDF">
-          $FILEPATH:/$COLORS_DATASET_NAME
-        </DataItem>
-      </Attribute>
-
-    </Grid>
-)";
-const std::string xdmf_postamble = R"(
-  </Domain>
-</Xdmf>
-)";
-
-integral_curve_saver::integral_curve_saver (domain_partitioner* partitioner, const std::string& filepath) : partitioner_(partitioner), filepath_(filepath + std::string(".rank") + std::to_string(partitioner_->cartesian_communicator()->rank()))
+integral_curve_saver::integral_curve_saver (domain_partitioner* partitioner, const std::string& filepath) 
+: partitioner_(partitioner)
+, filepath_   (std::filesystem::path(filepath).replace_extension(".rank_" + std::to_string(partitioner_->cartesian_communicator()->rank()) + ".h5").string())
 {
   file_ = H5Fcreate(filepath_.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 }
@@ -109,10 +80,10 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     const auto vertex_element_count = 3 * std::size_t(vertices.size());
     const auto color_element_count  = 3 * std::size_t(vertices.size());
     const auto index_count          =     std::size_t(use_64_bit_indices ? std::get<std::vector<std::uint64_t>>(indices).size() : std::get<std::vector<std::uint32_t>>(indices).size());
-    const auto name_prefix          = std::string("_rank_") + std::to_string(partitioner_->cartesian_communicator()->rank()) + "_round_" + std::to_string(curve_index) + "_";
-    const auto vertices_name        = name_prefix + "vertices";
-    const auto colors_name          = name_prefix + "colors"  ;
-    const auto indices_name         = name_prefix + "indices" ;
+    const auto vertices_name        = "vertices_" + std::to_string(curve_index);
+    const auto colors_name          = "colors_"   + std::to_string(curve_index);
+    const auto indices_name         = "indices_"  + std::to_string(curve_index);
+
     const auto vertices_space       = H5Screate_simple(1, &vertex_element_count, nullptr);
     const auto colors_space         = H5Screate_simple(1, &color_element_count , nullptr);
     const auto indices_space        = H5Screate_simple(1, &index_count         , nullptr);
@@ -123,7 +94,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     H5Dwrite(vertices_dataset, H5T_NATIVE_FLOAT                                          , vertices_space, vertices_space, H5P_DEFAULT, vertices.data()->data());
     H5Dwrite(colors_dataset  , H5T_NATIVE_UINT8                                          , colors_space  , colors_space  , H5P_DEFAULT, colors  .data()->data());
     H5Dwrite(indices_dataset , use_64_bit_indices ? H5T_NATIVE_UINT64 : H5T_NATIVE_UINT32, indices_space , indices_space , H5P_DEFAULT, use_64_bit_indices ? reinterpret_cast<void*>(std::get<std::vector<std::uint64_t>>(indices).data()) : std::get<std::vector<std::uint32_t>>(indices).data());
-    
+
     H5Sclose(vertices_space  );
     H5Sclose(colors_space    );
     H5Sclose(indices_space   );
@@ -132,7 +103,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     H5Dclose(indices_dataset );
     
     auto& xdmf = xdmfs.emplace_back(xdmf_body);
-    boost::replace_all(xdmf, "$GRID_NAME"            , name_prefix);
+    boost::replace_all(xdmf, "$GRID_NAME"            , "grid_" + std::to_string(curve_index));
     boost::replace_all(xdmf, "$POLYLINE_COUNT"       , std::to_string(index_count / 2));
     boost::replace_all(xdmf, "$FILEPATH"             , std::filesystem::path(filepath_).filename().string());
     boost::replace_all(xdmf, "$INDICES_DATASET_NAME" , indices_name );
@@ -145,6 +116,6 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
   }
   
   std::ofstream stream(filepath_ + ".xdmf");
-  stream << xdmf_preamble << std::accumulate(xdmfs.begin(), xdmfs.end(), std::string("")) << xdmf_postamble;
+  stream << xdmf_header << std::accumulate(xdmfs.begin(), xdmfs.end(), std::string("")) << xdmf_footer;
 }
 }
