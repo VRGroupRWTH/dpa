@@ -56,20 +56,37 @@ bool                          particle_advector::check_completion        (      
   boost::mpi::broadcast(*partitioner_->cartesian_communicator(), complete, 0);
   return complete;
 }
-void                          particle_advector::load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles) 
+void                          particle_advector::load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles)
 {
   if (load_balancer_ == load_balancer::none) return;
 
-#ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
-  // TODO: Neighborhood collectives.
-#else
   if (load_balancer_ == load_balancer::diffuse)
   {
+#ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
+    // TODO: Neighborhood collectives.
+#else
+    auto  communicator = partitioner_->cartesian_communicator();
+    auto& partitions   = partitioner_->partitions            ();
 
-  }
+    // Send/receive particle counts to/from neighbors.
+    std::vector<boost::mpi::request>                            requests;
+    std::unordered_map<relative_direction, load_balancing_info> neighbor_load_balancing_info;
+    for (auto& partition : partitions)
+      requests.push_back(communicator->isend(partition.second.rank, 0, load_balancing_info { std::min(std::size_t(particles_per_round_), particles.size()) }));
+    for (auto& partition : partitions)
+      communicator->recv(partition.second.rank, 0, neighbor_load_balancing_info[partition.first]);
+    for (auto& request : requests)
+      request.wait();
+
+    // TODO: Send/receive particle counts of neighbors to/from neighbors.
+
+    // TODO: Compute thresholds from greater processes and intents to lower processes.
+
+    // TODO: Send/receive particles.
 #endif
+  }
 }
-particle_advector::round_info particle_advector::compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles,                                                              const integral_curves_3d& integral_curves                              ) 
+particle_advector::round_info particle_advector::compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles,                                                              const integral_curves_3d& integral_curves) 
 {
   round_info round_info;
   round_info.particle_count = std::min(std::size_t(particles_per_round_), particles.size());
@@ -180,14 +197,14 @@ void                          particle_advector::load_balance_collect    (      
 {
   if (load_balancer_ == load_balancer::none) return;
 
-#ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
-  // TODO: Neighborhood collectives.
-#else
   if (load_balancer_ == load_balancer::diffuse)
   {
-
-  }
+#ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
+    // TODO: Neighborhood collectives.
+#else
+    // TODO: Collect particles.
 #endif
+  }
 }                                                                                                                                                                                                                         
 void                          particle_advector::out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                                                                                         const round_info& round_info) 
 {
@@ -200,20 +217,12 @@ void                          particle_advector::out_of_bounds_distribute(      
   auto& partitions   = partitioner_->partitions            ();
 
   for (auto& neighbor : round_info.out_of_bounds_particles)
-  {
-    if (partitions.find(neighbor.first) != partitions.end())
-    {
-      requests.push_back(communicator->isend(partitions.at(neighbor.first).rank, 0, neighbor.second));
-    }
-  } 
+    requests.push_back(communicator->isend(partitions.at(neighbor.first).rank, 0, neighbor.second));
   for (auto& neighbor : round_info.out_of_bounds_particles)
   {
-    if (partitions.find(neighbor.first) != partitions.end())
-    {
-      std::vector<particle<vector3, integer>> temporary_particles;
-      communicator->recv(partitions.at(neighbor.first).rank, 0, temporary_particles);
-      particles.insert(particles.end(), temporary_particles.begin(), temporary_particles.end());
-    }
+    std::vector<particle<vector3, integer>> temporary_particles;
+    communicator->recv(partitions.at(neighbor.first).rank, 0, temporary_particles);
+    particles.insert(particles.end(), temporary_particles.begin(), temporary_particles.end());
   }
 
   for (auto& request : requests)
