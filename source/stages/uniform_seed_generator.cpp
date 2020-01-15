@@ -15,7 +15,12 @@ std::vector<particle<vector3, integer>> uniform_seed_generator::generate(const v
   {
     const ivector3 multi_index = unravel_index(index, particles_per_dimension);
     const vector3  position    = offset.array() + stride.array() * multi_index.cast<scalar>().array();
-    particles[index]           = {position, iterations, process_index};
+
+#ifdef DPA_FTLE_SUPPORT
+    particles[index]           = {position, iterations, relative_direction::center, process_index};
+#else
+    particles[index]           = {position, iterations, relative_direction::center};
+#endif
   });
   return particles;
 }

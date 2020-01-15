@@ -233,6 +233,7 @@ void                          particle_advector::gather_particles        (      
 {
   if (!gather_particles_) return;
 
+#ifdef DPA_FTLE_SUPPORT
   std::vector<std::vector<particle<vector3, integer>>> sent    (partitioner_->cartesian_communicator()->size());
   std::vector<std::vector<particle<vector3, integer>>> received(partitioner_->cartesian_communicator()->size());
 
@@ -248,6 +249,9 @@ void                          particle_advector::gather_particles        (      
   particles.clear();
   for (auto& particles_vector : received)
     particles.insert(particles.end(), particles_vector.begin(), particles_vector.end());
+#else
+  std::cout << "Particles are not gathered since original ranks are unavailable. Declare DPA_FTLE_SUPPORT and rebuild." << std::endl;
+#endif
 }
 void                          particle_advector::prune_integral_curves   (                                                                                                                                                                                                                   integral_curves_3d& integral_curves) 
 {

@@ -19,14 +19,22 @@ struct particle
     archive & position[1];
     archive & position[2];
     archive & remaining_iterations;
-    archive & original_rank;
     archive & relative_direction;
+
+#ifdef DPA_FTLE_SUPPORT
+    archive & original_rank;
+    archive & original_position;
+#endif
   }
 
   position_type      position             = {};
   integer_type       remaining_iterations = 0 ;
-  integer_type       original_rank        = 0 ;
   relative_direction relative_direction   = relative_direction::center;
+
+#ifdef DPA_FTLE_SUPPORT
+  integer_type       original_rank        = 0 ;
+  position_type      original_position    = position;
+#endif
 };
 }
 
