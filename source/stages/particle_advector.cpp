@@ -39,10 +39,10 @@ particle_advector::output     particle_advector::advect                  (const 
   while (!check_completion(particles))
   {
                       load_balance_distribute (               particles                                                      );
-    auto round_info = compute_round_info      (               particles,                   output.integral_curves            );
-                      allocate_integral_curves(               particles,                   output.integral_curves, round_info);
+    auto round_info = compute_round_info      (               particles                                                      );
+                      allocate_integral_curves(                                            output.integral_curves, round_info);
                       advect                  (vector_fields, particles, output.particles, output.integral_curves, round_info);
-                      load_balance_collect    (vector_fields,            output.particles,                         round_info);
+                      load_balance_collect    (vector_fields,                                                      round_info);
                       out_of_bounds_distribute(               particles,                                           round_info);
   }
   gather_particles     (output.particles      );
@@ -111,7 +111,7 @@ void                          particle_advector::load_balance_distribute (      
 #endif
   }
 }
-particle_advector::round_info particle_advector::compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles,                                                              const integral_curves_3d& integral_curves) 
+particle_advector::round_info particle_advector::compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles) 
 {
   round_info round_info;
   round_info.particle_count = std::min(std::size_t(particles_per_round_), particles.size());
@@ -124,20 +124,17 @@ particle_advector::round_info particle_advector::compute_round_info      (      
   }
 
   for (auto& partition : partitioner_->partitions())
-  {
-    round_info.out_of_bounds_particles         .emplace(partition.first, std::vector<particle<vector3, integer>>());
-    round_info.neighbor_out_of_bounds_particles.emplace(partition.first, std::vector<particle<vector3, integer>>());
-  }
+    round_info.out_of_bounds_particles.emplace(partition.first, std::vector<particle<vector3, integer>>());
 
   return round_info;
 }
-void                          particle_advector::allocate_integral_curves(                                                                                      const std::vector<particle<vector3, integer>>& particles,                                                                    integral_curves_3d& integral_curves, const round_info& round_info) 
+void                          particle_advector::allocate_integral_curves(                                                                                                                                                                                                             integral_curves_3d& integral_curves, const round_info& round_info) 
 {
   if (!record_) return;
 
   integral_curves.emplace_back().resize(round_info.vertex_count, invalid_value<vector3>());
 }
-void                          particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& particles, std::vector<particle<vector3, integer>>& inactive_particles,       integral_curves_3d& integral_curves,       round_info& round_info)
+void                          particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& particles, std::vector<particle<vector3, integer>>& inactive_particles, integral_curves_3d& integral_curves,       round_info& round_info)
 {
   tbb::mutex mutex;
   tbb::parallel_for(std::size_t(0), round_info.particle_count, std::size_t(1), [&] (const std::size_t particle_index)
@@ -218,7 +215,7 @@ void                          particle_advector::advect                  (const 
   });
   particles.resize(particles.size() - round_info.particle_count);
 }
-void                          particle_advector::load_balance_collect    (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,                                                           std::vector<particle<vector3, integer>>& inactive_particles,                                                  round_info& round_info) 
+void                          particle_advector::load_balance_collect    (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,                                                                                                                                                                   round_info& round_info) 
 {
   if (load_balancer_ == load_balancer::none) return;
 
@@ -227,34 +224,65 @@ void                          particle_advector::load_balance_collect    (const 
 #ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
     // TODO: Neighborhood collectives.
 #else
-    auto  communicator = partitioner_->cartesian_communicator();
-    auto& partitions   = partitioner_->partitions            ();
+    round_info::particle_map                outgoing_particles;
+    std::vector<particle<vector3, integer>> incoming_particles;
 
-    std::vector<particle<vector3, integer>> collected_particles;
-
-    std::vector<boost::mpi::request> requests;
-    // TODO: Collect particles.
-    for (auto& request : requests)
-      request.wait();
-
-    auto& vector_field = vector_fields.at(relative_direction::center);
-    auto  lower_bounds = vector_field.offset;
-    auto  upper_bounds = vector_field.offset + vector_field.size;
-
-    tbb::mutex mutex;
-    tbb::parallel_for(std::size_t(0), collected_particles.size(), std::size_t(1), [&] (const std::size_t particle_index)
+    // Prepare.
     {
-      auto& particle = collected_particles[particle_index];
+      for (auto& partition : partitioner_->partitions())
+        outgoing_particles.emplace(partition.first, std::vector<particle<vector3, integer>>());
 
-      particle.relative_direction = relative_direction::center;
-
-      if      (particle.remaining_iterations == 0)
+      for (auto& partition : partitioner_->partitions())
       {
-        tbb::mutex::scoped_lock lock(mutex);
-        inactive_particles.push_back(particle);
+        round_info::particle_map::accessor input_accessor;
+        round_info.out_of_bounds_particles.find(input_accessor, partition.first);
+        tbb::parallel_for(std::size_t(0), input_accessor->second.size(), std::size_t(1), [&] (const std::size_t index)
+        {
+          auto& particle = input_accessor->second[index];
+
+          if (particle.relative_direction != relative_direction::center)
+          {
+            round_info::particle_map::accessor output_accessor;
+            outgoing_particles.find(output_accessor, particle.relative_direction); // TODO: Inverse of particle.relative_direction.
+            output_accessor->second.push_back(particle);
+          }
+        });
       }
-      else if (!vector_field.contains(particle.position))
+    }
+
+    // Transmit.
+    {
+      std::vector<boost::mpi::request> requests;
+
+      auto  communicator = partitioner_->cartesian_communicator();
+      auto& partitions   = partitioner_->partitions            ();
+
+      for (auto& neighbor : outgoing_particles)
+        requests.push_back(communicator->isend(partitions.at(neighbor.first).rank, 0, neighbor.second));
+      for (auto& neighbor : outgoing_particles)
       {
+        std::vector<particle<vector3, integer>> temporary_particles;
+        communicator->recv(partitions.at(neighbor.first).rank, 0, temporary_particles);
+        incoming_particles.insert(incoming_particles.end(), temporary_particles.begin(), temporary_particles.end());
+      }
+
+      for (auto& request : requests)
+        request.wait();
+    }
+
+    // Process.
+    {
+      auto& vector_field = vector_fields.at(relative_direction::center);
+      auto  lower_bounds = vector_field.offset;
+      auto  upper_bounds = vector_field.offset + vector_field.size;
+
+      tbb::mutex mutex;
+      tbb::parallel_for(std::size_t(0), incoming_particles.size(), std::size_t(1), [&] (const std::size_t particle_index)
+      {
+        auto& particle = incoming_particles[particle_index];
+
+        particle.relative_direction = relative_direction::center;
+
         std::optional<relative_direction> direction;
         if      (particle.position[0] < lower_bounds[0]) direction = relative_direction::negative_x;
         else if (particle.position[0] > upper_bounds[0]) direction = relative_direction::positive_x;
@@ -266,13 +294,8 @@ void                          particle_advector::load_balance_collect    (const 
         round_info::particle_map::accessor accessor;
         if (direction && round_info.out_of_bounds_particles.find(accessor, direction.value()))
           accessor->second.push_back(particle);
-        else
-        {
-          tbb::mutex::scoped_lock lock(mutex);
-          inactive_particles.push_back(particle);
-        }
-      }
-    });
+      });
+    }
 #endif
   }
 }                                                                                                                                                                                                                         

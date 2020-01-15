@@ -63,31 +63,31 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       particle_advector::round_info round_info;
       recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
       {
-                        advector.load_balance_distribute (               particles                                                      );
+                     advector.load_balance_distribute (               particles                                                      );
       });
       recorder.record("4.2." + std::to_string(rounds) + ".compute_round_info"      , [&] ()
       {
-        round_info =    advector.compute_round_info      (               particles,                   output.integral_curves            );
+        round_info = advector.compute_round_info      (               particles                                                      );
       });
       recorder.record("4.3." + std::to_string(rounds) + ".allocate_integral_curves", [&] ()
       {
-                        advector.allocate_integral_curves(               particles,                   output.integral_curves, round_info);
+                     advector.allocate_integral_curves(                                            output.integral_curves, round_info);
       });
       recorder.record("4.4." + std::to_string(rounds) + ".advect"                  , [&] ()
       {
-                        advector.advect                  (vector_fields, particles, output.particles, output.integral_curves, round_info);
+                     advector.advect                  (vector_fields, particles, output.particles, output.integral_curves, round_info);
       });
       recorder.record("4.5." + std::to_string(rounds) + ".load_balance_collect"    , [&] ()
       {
-                        advector.load_balance_collect    (vector_fields,            output.particles,                         round_info);
+                     advector.load_balance_collect    (vector_fields,                                                      round_info);
       });
       recorder.record("4.6." + std::to_string(rounds) + ".out_of_bounds_distribute", [&] ()
       {
-                        advector.out_of_bounds_distribute(               particles,                                           round_info);
+                     advector.out_of_bounds_distribute(               particles,                                           round_info);
       });
       recorder.record("4.7." + std::to_string(rounds) + ".check_completion"        , [&] ()
       {
-        complete =      advector.check_completion        (               particles                                                      );
+        complete =   advector.check_completion        (               particles                                                      );
       });  
       rounds++;
     }
