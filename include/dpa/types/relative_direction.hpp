@@ -3,7 +3,7 @@
 
 namespace dpa
 {
-enum class relative_direction
+enum relative_direction
 {
   center    ,
   negative_x,

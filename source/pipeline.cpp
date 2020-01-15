@@ -79,7 +79,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       });
       recorder.record("4.5." + std::to_string(rounds) + ".load_balance_collect"    , [&] ()
       {
-                        advector.load_balance_collect    (                                                                    round_info);
+                        advector.load_balance_collect    (vector_fields,            output.particles,                         round_info);
       });
       recorder.record("4.6." + std::to_string(rounds) + ".out_of_bounds_distribute", [&] ()
       {

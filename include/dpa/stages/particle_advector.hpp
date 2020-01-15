@@ -25,7 +25,9 @@ public:
   enum class load_balancer
   {
     none,
-    diffuse
+    diffuse_constant,
+    diffuse_lesser_average,
+    diffuse_greater_limited_lesser_average
   };
 
   struct round_info
@@ -72,7 +74,7 @@ protected:
   round_info         compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& active_particles,                                                              const integral_curves_3d& integral_curves);
   void               allocate_integral_curves(                                                                                      const std::vector<particle<vector3, integer>>& active_particles,                                                                    integral_curves_3d& integral_curves, const round_info& round_info);
   void               advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& active_particles, std::vector<particle<vector3, integer>>& inactive_particles,       integral_curves_3d& integral_curves,       round_info& round_info);
-  void               load_balance_collect    (                                                                                                                                                                                                                                                                     round_info& round_info);
+  void               load_balance_collect    (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,                                                                  std::vector<particle<vector3, integer>>& inactive_particles,                                                  round_info& round_info);
   void               out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& active_particles,                                                                                                         const round_info& round_info);
   void               gather_particles        (                                                                                                                                                       std::vector<particle<vector3, integer>>& inactive_particles);
   void               prune_integral_curves   (                                                                                                                                                                                                                          integral_curves_3d& integral_curves);
