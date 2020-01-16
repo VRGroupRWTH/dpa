@@ -46,9 +46,11 @@ public:
     template<class archive_type>
     void serialize(archive_type& archive, const std::uint32_t version)
     {
+      archive & rank;
       archive & particle_count;
     }
 
+    std::size_t  rank;
     std::size_t  particle_count;
   };
   struct output

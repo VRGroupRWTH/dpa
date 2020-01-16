@@ -5,13 +5,13 @@ namespace dpa
 {
 enum relative_direction
 {
-  center    ,
-  negative_x,
-  positive_x,
-  negative_y,
-  positive_y,
-  negative_z,
-  positive_z,
+  center     =  0,
+  negative_x = -1,
+  positive_x =  1,
+  negative_y = -2,
+  positive_y =  2,
+  negative_z = -3,
+  positive_z =  3,
 };
 }
 

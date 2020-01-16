@@ -72,7 +72,7 @@ void                          particle_advector::load_balance_distribute (      
 
     // Send/receive particle counts to/from neighbors.
     std::vector<boost::mpi::request>                            requests;
-    const load_balancing_info                                   local_load_balancing_info { std::min(std::size_t(particles_per_round_), particles.size()) };
+    const load_balancing_info                                   local_load_balancing_info { std::size_t(communicator->rank()), std::min(std::size_t(particles_per_round_), particles.size()) };
     std::unordered_map<relative_direction, load_balancing_info> neighbor_load_balancing_info;
     for (auto& partition : partitions)
       requests.push_back(communicator->isend(partition.second.rank, 0, local_load_balancing_info));
@@ -80,33 +80,58 @@ void                          particle_advector::load_balance_distribute (      
       communicator->recv(partition.second.rank, 0, neighbor_load_balancing_info[partition.first]);
     for (auto& request : requests)
       request.wait();
+    requests.clear();
 
     if      (load_balancer_ == load_balancer::diffuse_constant)
     {
       const auto alpha = scalar(0.5); // 1 - 2 / (dimensions + 1);
 
-      std::vector<boost::mpi::request> requests;
-
-      // If neighbor below you, send    alpha * |diff|.
       for (auto& neighbor : neighbor_load_balancing_info)
-        if (neighbor.second.particle_count < local_load_balancing_info.particle_count)
-          std::size_t send_count = alpha * (local_load_balancing_info.particle_count - neighbor.second.particle_count);
+      {
+        if (neighbor.second.particle_count > local_load_balancing_info.particle_count) continue;
 
-      // If neighbor above you, receive alpha * |diff|.
+        std::size_t count = alpha * (local_load_balancing_info.particle_count - neighbor.second.particle_count);
+        if (count > particles.size())
+            count = particles.size();
+
+        std::vector<particle<vector3, integer>> outgoing_particles(particles.end() - count, particles.end());
+        particles.erase(particles.end() - count, particles.end());
+
+        tbb::parallel_for(std::size_t(0), outgoing_particles.size(), std::size_t(1), [&] (const std::size_t index)
+        {
+          outgoing_particles[index].relative_direction = relative_direction(-neighbor.first);
+        });
+
+        requests.push_back(communicator->isend(neighbor.second.rank, 0, outgoing_particles));
+      } 
       for (auto& neighbor : neighbor_load_balancing_info)
-        if (neighbor.second.particle_count > local_load_balancing_info.particle_count)
-          std::size_t recv_count = alpha * (neighbor.second.particle_count - local_load_balancing_info.particle_count);
+      {
+        if (neighbor.second.particle_count < local_load_balancing_info.particle_count) continue;
 
+        std::vector<particle<vector3, integer>> incoming_particles;
+        communicator->recv(neighbor.second.rank, 0, incoming_particles);
+        particles.insert(particles.end(), incoming_particles.begin(), incoming_particles.end());
+      }
+      
       for (auto& request : requests)
         request.wait();
+      requests.clear();
     }
     else if (load_balancer_ == load_balancer::diffuse_lesser_average)
     {
-      
+      // TODO
+
+      for (auto& request : requests)
+        request.wait();
+      requests.clear();
     }
     else if (load_balancer_ == load_balancer::diffuse_greater_limited_lesser_average)
     {
-      
+      // TODO
+
+      for (auto& request : requests)
+        request.wait();
+      requests.clear();
     }
 #endif
   }
