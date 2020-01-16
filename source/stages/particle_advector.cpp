@@ -1,5 +1,6 @@
 #include <dpa/stages/particle_advector.hpp>
 
+#include <cmath>
 #include <optional>
 
 #include <boost/serialization/vector.hpp>
@@ -71,31 +72,77 @@ void                          particle_advector::load_balance_distribute (      
     auto& partitions   = partitioner_->partitions            ();
 
     // Send/receive particle counts to/from neighbors.
-    std::vector<boost::mpi::request>                            requests;
     const load_balancing_info                                   local_load_balancing_info { std::size_t(communicator->rank()), std::min(std::size_t(particles_per_round_), particles.size()) };
     std::unordered_map<relative_direction, load_balancing_info> neighbor_load_balancing_info;
-    for (auto& partition : partitions)
-      requests.push_back(communicator->isend(partition.second.rank, 0, local_load_balancing_info));
-    for (auto& partition : partitions)
-      communicator->recv(partition.second.rank, 0, neighbor_load_balancing_info[partition.first]);
-    for (auto& request : requests)
-      request.wait();
-    requests.clear();
+    {
+      std::vector<boost::mpi::request> requests;
+      for (auto& partition : partitions)
+        requests.push_back(communicator->isend(partition.second.rank, 0, local_load_balancing_info));
+      for (auto& partition : partitions)
+        communicator->recv(partition.second.rank, 0, neighbor_load_balancing_info[partition.first]);
+      for (auto& request : requests)
+        request.wait();
+    }
 
+    // Load balancers fill the outgoing_counts to each of their neighbors.
+    std::unordered_map<relative_direction, std::size_t> outgoing_counts;
+    for (auto& neighbor : neighbor_load_balancing_info)
+      outgoing_counts[neighbor.first] = 0;
     if      (load_balancer_ == load_balancer::diffuse_constant)
     {
-      const auto alpha = scalar(0.5); // 1 - 2 / (dimensions + 1);
+      // Alpha is  1 - 2 / (dimensions + 1) -> 0.5 for 3D.
+      for (auto& neighbor : neighbor_load_balancing_info)
+        if (neighbor.second.particle_count < local_load_balancing_info.particle_count)
+          outgoing_counts[neighbor.first] = std::min(particles.size(), std::size_t((local_load_balancing_info.particle_count - neighbor.second.particle_count) * double(0.5)));
+    }
+    else if (load_balancer_ == load_balancer::diffuse_lesser_average)
+    {
+      std::unordered_map<relative_direction, bool> contributors;
+      std::size_t sum(0), count(0), mean(local_load_balancing_info.particle_count);
+      auto is_complete = [&] ()
+      {
+        // False while there are contributors above the mean.
+        for (auto& contributor : contributors)
+          if (contributor.second)
+            if (neighbor_load_balancing_info.at(contributor.first).particle_count > mean)
+              return false;
+        return true;
+      };
+
+      do
+      {
+        sum   = local_load_balancing_info.particle_count;
+        count = 1;
+        for (auto& neighbor : neighbor_load_balancing_info)
+        {
+          if (neighbor.second.particle_count < mean)
+          {
+            contributors[neighbor.first]  = true;
+            sum                          += neighbor.second.particle_count;
+            count                        ++;
+          }
+          else
+            contributors[neighbor.first] = false;
+        }
+        mean = sum / count;
+      } while (!is_complete());
 
       for (auto& neighbor : neighbor_load_balancing_info)
+        if (contributors[neighbor.first])
+          outgoing_counts[neighbor.first] = std::min(particles.size(), mean - neighbor_load_balancing_info[neighbor.first].particle_count);
+    }
+    else if (load_balancer_ == load_balancer::diffuse_greater_limited_lesser_average)
+    {
+      // TODO
+    }
+
+    // Send/receive outgoing_counts particles to/from neighbors.
+    {
+      std::vector<boost::mpi::request> requests;
+      for (auto& neighbor : neighbor_load_balancing_info)
       {
-        if (neighbor.second.particle_count > local_load_balancing_info.particle_count) continue;
-
-        std::size_t count = alpha * (local_load_balancing_info.particle_count - neighbor.second.particle_count);
-        if (count > particles.size())
-            count = particles.size();
-
-        std::vector<particle<vector3, integer>> outgoing_particles(particles.end() - count, particles.end());
-        particles.erase(particles.end() - count, particles.end());
+        std::vector<particle<vector3, integer>> outgoing_particles(particles.end() - outgoing_counts[neighbor.first], particles.end());
+        particles.erase(particles.end() - outgoing_counts[neighbor.first], particles.end());
 
         tbb::parallel_for(std::size_t(0), outgoing_particles.size(), std::size_t(1), [&] (const std::size_t index)
         {
@@ -103,35 +150,17 @@ void                          particle_advector::load_balance_distribute (      
         });
 
         requests.push_back(communicator->isend(neighbor.second.rank, 0, outgoing_particles));
+        std::cout << "Send " << outgoing_particles.size() << " particles to neighbor " << neighbor.first << "\n";
       } 
       for (auto& neighbor : neighbor_load_balancing_info)
       {
-        if (neighbor.second.particle_count < local_load_balancing_info.particle_count) continue;
-
         std::vector<particle<vector3, integer>> incoming_particles;
         communicator->recv(neighbor.second.rank, 0, incoming_particles);
         particles.insert(particles.end(), incoming_particles.begin(), incoming_particles.end());
-      }
-      
+        std::cout << "Recv " << incoming_particles.size() << " particles from neighbor " << neighbor.first << "\n";
+      }   
       for (auto& request : requests)
         request.wait();
-      requests.clear();
-    }
-    else if (load_balancer_ == load_balancer::diffuse_lesser_average)
-    {
-      // TODO
-
-      for (auto& request : requests)
-        request.wait();
-      requests.clear();
-    }
-    else if (load_balancer_ == load_balancer::diffuse_greater_limited_lesser_average)
-    {
-      // TODO
-
-      for (auto& request : requests)
-        request.wait();
-      requests.clear();
     }
 #endif
   }
