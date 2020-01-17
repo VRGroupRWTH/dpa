@@ -133,7 +133,85 @@ void                          particle_advector::load_balance_distribute (      
     }
     else if (load_balancer_ == load_balancer::diffuse_greater_limited_lesser_average)
     {
-      // TODO
+      std::unordered_map<relative_direction, bool> greater_contributors;
+      std::size_t greater_sum(0), greater_count(0), greater_mean(local_load_balancing_info.particle_count);
+      auto is_greater_mean_complete = [&] ()
+      {
+        // False while there are contributors below the mean.
+        for (auto& contributor : greater_contributors)
+          if (contributor.second)
+            if (neighbor_load_balancing_info.at(contributor.first).particle_count < greater_mean)
+              return false;
+        return true;
+      };
+      
+      do
+      {
+        greater_sum   = local_load_balancing_info.particle_count;
+        greater_count = 1;
+        for (auto& neighbor : neighbor_load_balancing_info)
+        {
+          if (neighbor.second.particle_count > greater_mean)
+          {
+            greater_contributors[neighbor.first]  = true;
+            greater_sum                          += neighbor.second.particle_count;
+            greater_count                        ++;
+          }
+          else
+            greater_contributors[neighbor.first] = false;
+        }
+        greater_mean = greater_sum / greater_count;
+      } while (!is_greater_mean_complete());
+
+      auto total_quota = greater_mean - local_load_balancing_info.particle_count;
+      std::unordered_map<relative_direction, quota_info> outgoing_quotas, incoming_quotas;
+      for (auto& neighbor : neighbor_load_balancing_info)
+        outgoing_quotas[neighbor.first] = quota_info { greater_contributors[neighbor.first] ? total_quota * neighbor.second.particle_count / (greater_sum - local_load_balancing_info.particle_count) : 0ull};
+
+      // Send/receive quotas to/from neighbors.
+      {
+        std::vector<boost::mpi::request> requests;
+        for (auto& partition : partitions)
+          requests.push_back(communicator->isend(partition.second.rank, 0, outgoing_quotas[partition.first]));
+        for (auto& partition : partitions)
+          communicator->recv(partition.second.rank, 0, incoming_quotas[partition.first]);
+        for (auto& request : requests)
+          request.wait();
+      }
+
+      std::unordered_map<relative_direction, bool> lesser_contributors;
+      std::size_t lesser_sum(0), lesser_count(0), lesser_mean(local_load_balancing_info.particle_count);
+      auto is_lesser_mean_complete = [&] ()
+      {
+        // False while there are contributors above the mean.
+        for (auto& contributor : lesser_contributors)
+          if (contributor.second)
+            if (neighbor_load_balancing_info.at(contributor.first).particle_count > lesser_mean)
+              return false;
+        return true;
+      };
+
+      do
+      {
+        lesser_sum   = local_load_balancing_info.particle_count;
+        lesser_count = 1;
+        for (auto& neighbor : neighbor_load_balancing_info)
+        {
+          if (neighbor.second.particle_count < lesser_mean)
+          {
+            lesser_contributors[neighbor.first]  = true;
+            lesser_sum                          += neighbor.second.particle_count;
+            lesser_count                        ++;
+          }
+          else
+            lesser_contributors[neighbor.first] = false;
+        }
+        lesser_mean = lesser_sum / lesser_count;
+      } while (!is_lesser_mean_complete());
+
+      for (auto& neighbor : neighbor_load_balancing_info)
+        if (lesser_contributors[neighbor.first])
+          outgoing_counts[neighbor.first] = std::min(particles.size(), std::min(incoming_quotas[neighbor.first].quota, lesser_mean - neighbor_load_balancing_info[neighbor.first].particle_count));
     }
 
     // Send/receive outgoing_counts particles to/from neighbors.

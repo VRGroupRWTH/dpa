@@ -53,6 +53,17 @@ public:
     std::size_t  rank;
     std::size_t  particle_count;
   };
+  struct quota_info
+  {
+    // Function for boost::serialization which is used by boost::mpi.
+    template<class archive_type>
+    void serialize(archive_type& archive, const std::uint32_t version)
+    {
+      archive & quota;
+    }
+
+    std::size_t quota;
+  };
   struct output
   {
     std::vector<particle<vector3, integer>> particles       {};

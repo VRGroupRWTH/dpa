@@ -1,14 +1,14 @@
 {
-  "input_dataset_filepath"               : "D:/root/data/pli/old_msa_0.1.h5",
-  "input_dataset_name"                   : "vectors",
+  "input_dataset_filepath"               : "C:/development/data/oregon/astro.h5",
+  "input_dataset_name"                   : "Data3",
   "input_dataset_spacing_name"           : "spacing",
-  "seed_generation_stride"               : [ 8, 8, 1 ],
+  "seed_generation_stride"               : [ 4, 4, 4 ],
   "seed_generation_iterations"           : 1000,
-  "particle_advector_particles_per_round": 1000,
-  "particle_advector_load_balancer"      : "diffuse",
+  "particle_advector_particles_per_round": 10000,
+  "particle_advector_load_balancer"      : "diffuse_greater_limited_lesser_average",
   "particle_advector_integrator"         : "runge_kutta_4",
-  "particle_advector_step_size"          : 0.1,
-  "particle_advector_gather_particles"   : true,
+  "particle_advector_step_size"          : 0.001,
+  "particle_advector_gather_particles"   : false,
   "particle_advector_record"             : true,
-  "output_dataset_filepath"              : "D:/root/data/pli/old_msa_0.1_integral_curves.h5"
+  "output_dataset_filepath"              : "C:/development/data/oregon/astro_curves.h5"
 }
