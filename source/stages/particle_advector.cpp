@@ -414,7 +414,7 @@ void                          particle_advector::load_balance_collect    (const 
 #endif
   }
 }                                                                                                                                                                                                                         
-void                          particle_advector::out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                                                                                         const round_info& round_info) 
+void                          particle_advector::out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                                                                                   const round_info& round_info) 
 {
 #ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
   // TODO: Neighborhood collectives.

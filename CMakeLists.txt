@@ -10,6 +10,11 @@ set_max_warning_level ()
 
 ##################################################    Options     ##################################################
 option(BUILD_TESTS "Build tests." OFF)
+option(DPA_FTLE_SUPPORT "Build with FTLE support (i.e. particle gathering and grid remapping)." OFF)
+
+if   (DPA_FTLE_SUPPORT)
+list (APPEND PROJECT_COMPILE_DEFINITIONS -DDPA_FTLE_SUPPORT)
+endif()
 
 ##################################################    Sources     ##################################################
 file(GLOB_RECURSE PROJECT_HEADERS include/*.h include/*.hpp)
