@@ -1,49 +1,95 @@
 import json
+from pathlib import Path
+
+# $1: configuration name 
+# $2: application filepath 
+# $3: number of nodes
+script_template = """#!/bin/bash
+#SBATCH --job-name=$1
+#SBATCH --output=$1.log
+#SBATCH --time=00:10:00
+#SBATCH --mem=192000M
+#SBATCH --nodes=$3
+#SBATCH --cpus-per-task=48
+#SBATCH --ntasks-per-node=1
+#SBATCH --account=rwth0432
+$MPIEXEC $FLAGS_MPI_BATCH $2 $1.json
+"""
 
 def generate(
-  config_filepath           ,
-  input_dataset_filepath    ,
-  input_dataset_name        ,
-  input_dataset_spacing_name,
-  stride                    ,
-  iterations                ,
-  particles_per_round       ,
-  load_balancer             ,
-  integrator                ,
-  step_size                 ,
-  gather_particles          ,
-  record                    ,
-  output_dataset_filepath   ):
-    config = {}
-    config["input_dataset_filepath"               ] = input_dataset_filepath
-    config["input_dataset_name"                   ] = input_dataset_name
-    config["input_dataset_spacing_name"           ] = input_dataset_spacing_name
-    config["seed_generation_stride"               ] = [stride, stride, stride]
-    config["seed_generation_iterations"           ] = iterations
-    config["particle_advector_particles_per_round"] = particles_per_round
-    config["particle_advector_load_balancer"      ] = load_balancer
-    config["particle_advector_integrator"         ] = integrator
-    config["particle_advector_step_size"          ] = step_size
-    config["particle_advector_gather_particles"   ] = gather_particles
-    config["particle_advector_record"             ] = record
-    config["output_dataset_filepath"              ] = output_dataset_filepath
-    config_json = json.dumps(config)
-    with open(config_filepath, 'w') as file:
-        json.dump(config, file, indent=2)
+  nodes                  ,
+  input_dataset_filepath ,
+  stride                 ,
+  iterations             ,
+  particles_per_round    ,
+  load_balancer          ):
+  load_balancer_shorthand = "none"
+  if (load_balancer == "diffuse_constant"):
+    load_balancer_shorthand = "const"
+  if (load_balancer == "diffuse_lesser_average"):
+    load_balancer_shorthand = "lma"
+  if (load_balancer == "diffuse_greater_limited_lesser_average"):
+    load_balancer_shorthand = "gllma"
+  
+  name = (Path(input_dataset_filepath).resolve().stem + 
+    "_n"   + str(nodes)               + 
+    "_s"   + str(stride)              + 
+    "_i"   + str(iterations)          + 
+    "_ppr" + str(particles_per_round) + 
+    "_lb_" + load_balancer_shorthand)
 
-    # TODO: Generate accompanying sbatch shell file.
+  script = (script_template.
+    replace("$1", name).
+    replace("$2", "/hpcwork/ad784563/source/dpa/build/dpa").
+    replace("$3", str(nodes)))
+  with open(name + ".sh", 'w') as file:
+    file.write(script)
 
-generate(
-  "test.json"                                 ,
-  "C:/development/data/oregon/astro.h5"       ,
-  "Data3"                                     ,
-  "spacing"                                   ,
-  4                                           ,
-  1000                                        ,
-  10000                                       ,
-  "diffuse_greater_limited_lesser_average"    ,
-  "runge_kutta_4"                             ,
-  0.001                                       ,
-  False                                       ,
-  True                                        ,
-  "C:/development/data/oregon/astro_curves.h5")
+  configuration = {}
+  configuration["input_dataset_filepath"               ] = input_dataset_filepath
+  configuration["input_dataset_name"                   ] = "Data3"
+  configuration["input_dataset_spacing_name"           ] = "spacing"
+  configuration["seed_generation_stride"               ] = [stride, stride, stride]
+  configuration["seed_generation_iterations"           ] = iterations
+  configuration["particle_advector_particles_per_round"] = particles_per_round
+  configuration["particle_advector_load_balancer"      ] = load_balancer
+  configuration["particle_advector_integrator"         ] = "runge_kutta_4"
+  configuration["particle_advector_step_size"          ] = "0.001"
+  configuration["particle_advector_gather_particles"   ] = True
+  configuration["particle_advector_record"             ] = True
+  configuration["output_dataset_filepath"              ] = name + ".h5"
+  with open(name + ".json", 'w') as file:
+    json.dump(configuration, file, indent=2)
+
+def combine(
+  nodes                  ,
+  input_dataset_filepath ,
+  stride                 ,
+  iterations             ,
+  particles_per_round    ,
+  load_balancer          ):
+  for n in nodes: 
+    for d in input_dataset_filepath:
+      for s in stride:
+        for i in iterations:
+          for ppr in particles_per_round:
+            for lb in load_balancer:
+              generate(n, d, s, i, ppr, lb)
+
+#combine(
+#  [1, 4, 8, 16, 32, 64, 128, 256],
+#  ["/hpcwork/ad784563/data/oregon/astro.h5", "/hpcwork/ad784563/data/oregon/fishtank.h5", "/hpcwork/ad784563/data/oregon/fusion.h5"],
+#  [1, 4, 8, 16, 32, 64],
+#  [100, 1000, 10000, 100000],
+#  [100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000],
+#  ["none", "diffuse_constant", "diffuse_lesser_average", "diffuse_greater_limited_lesser_average"]
+#)
+
+combine(
+  [4, 8, 16, 32],
+  ["/hpcwork/ad784563/data/oregon/astro.h5"],
+  [1, 4],
+  [100, 1000],
+  [10000000, 100000000],
+  ["diffuse_greater_limited_lesser_average"]
+)
