@@ -6,7 +6,9 @@ if [ ! -d "vcpkg" ]; then git clone https://github.com/Microsoft/vcpkg.git; fi
 cd vcpkg
 if [ ! -f "vcpkg" ]; then ./bootstrap-vcpkg.sh; fi
 
-VCPKG_DEFAULT_TRIPLET=x64-linux
+cp ../../utility/vcpkg/x64-linux-dynamic.cmake ./triplets/
+
+VCPKG_DEFAULT_TRIPLET=x64-linux-dynamic
 vcpkg install boost-mpi boost-odeint boost-ublas catch2 Eigen3 hdf5[parallel] intel-mkl mpi nlohmann-json tbb
 cd ..
 
