@@ -6,12 +6,8 @@ if [ ! -d "vcpkg" ]; then git clone https://github.com/Microsoft/vcpkg.git; fi
 cd vcpkg
 if [ ! -f "vcpkg" ]; then ./bootstrap-vcpkg.sh; fi
 
-mkdir custom-triplets
-cp ./triplets/x64-linux.cmake ./custom-triplets/x64-linux-static.cmake
-cp ../../utility/vcpkg/x64-linux.cmake ./custom-triplets/
-
-VCPKG_DEFAULT_TRIPLET=x64-linux-dynamic
-vcpkg install boost-mpi boost-odeint boost-ublas catch2 Eigen3 hdf5[parallel] intel-mkl mpi nlohmann-json tbb --overlay-triplets=custom-triplets
+VCPKG_DEFAULT_TRIPLET=x64-linux
+vcpkg install boost-mpi boost-odeint boost-ublas catch2 Eigen3 hdf5[parallel] intel-mkl mpi nlohmann-json tbb
 cd ..
 
 cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake ..
