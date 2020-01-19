@@ -27,9 +27,9 @@ struct particle
 #endif
   }
 
-  position_type      position             = {};
-  integer_type       remaining_iterations = 0 ;
-  relative_direction relative_direction   = relative_direction::center;
+  position_type           position             = {};
+  integer_type            remaining_iterations = 0 ;
+  dpa::relative_direction relative_direction   = dpa::relative_direction::center;
 
 #ifdef DPA_FTLE_SUPPORT
   integer_type       original_rank        = 0 ;

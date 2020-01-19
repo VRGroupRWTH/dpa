@@ -77,9 +77,9 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
       cast_indices.erase(std::remove(cast_indices.begin(), cast_indices.end(), use_64_bit_indices ? std::numeric_limits<std::uint64_t>::max() : std::numeric_limits<std::uint32_t>::max()), cast_indices.end());
     }, indices);
 
-    const auto vertex_element_count = 3 * std::size_t(vertices.size());
-    const auto color_element_count  = 3 * std::size_t(vertices.size());
-    const auto index_count          =     std::size_t(use_64_bit_indices ? std::get<std::vector<std::uint64_t>>(indices).size() : std::get<std::vector<std::uint32_t>>(indices).size());
+    const auto vertex_element_count = hsize_t(3 * vertices.size());
+    const auto color_element_count  = hsize_t(3 * vertices.size());
+    const auto index_count          = hsize_t(use_64_bit_indices ? std::get<std::vector<std::uint64_t>>(indices).size() : std::get<std::vector<std::uint32_t>>(indices).size());
     const auto vertices_name        = "vertices_" + std::to_string(curve_index);
     const auto colors_name          = "colors_"   + std::to_string(curve_index);
     const auto indices_name         = "indices_"  + std::to_string(curve_index);
