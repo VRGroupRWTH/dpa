@@ -1,5 +1,7 @@
 #!/bin/sh
 
+directory = $PWD
+
 # Enable modules.
 module swap intelmpi openmpi
 module load gcc/9 cmake/3.13.2
@@ -16,3 +18,5 @@ make configure
 make
 make install
 export PATH=~/packages/bin:$PATH
+
+cd directory
