@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 # $1: configuration name 
@@ -42,7 +43,7 @@ def generate(
     replace("$1", name).
     replace("$2", "/hpcwork/ad784563/source/dpa/build/dpa").
     replace("$3", str(nodes)))
-  with open(name + ".sh", 'w') as file:
+  with open("../configs/" + name + ".sh", 'w') as file:
     file.write(script)
 
   configuration = {}
@@ -58,7 +59,7 @@ def generate(
   configuration["particle_advector_gather_particles"   ] = True
   configuration["particle_advector_record"             ] = True
   configuration["output_dataset_filepath"              ] = name + ".h5"
-  with open(name + ".json", 'w') as file:
+  with open("../configs/" + name + ".json", 'w') as file:
     json.dump(configuration, file, indent=2)
 
 def combine(
@@ -76,20 +77,11 @@ def combine(
             for lb in load_balancer:
               generate(n, d, s, i, ppr, lb)
 
-#combine(
-#  [1, 4, 8, 16, 32, 64, 128, 256],
-#  ["/hpcwork/ad784563/data/oregon/astro.h5", "/hpcwork/ad784563/data/oregon/fishtank.h5", "/hpcwork/ad784563/data/oregon/fusion.h5"],
-#  [1, 4, 8, 16, 32, 64],
-#  [100, 1000, 10000, 100000],
-#  [100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000],
-#  ["none", "diffuse_constant", "diffuse_lesser_average", "diffuse_greater_limited_lesser_average"]
-#)
-
 combine(
-  [4, 8, 16, 32],
-  ["/hpcwork/ad784563/data/oregon/astro.h5"],
-  [1, 4],
-  [100, 1000],
+  [32, 64, 128, 256],
+  ["/hpcwork/ad784563/data/oregon/astro.h5", "/hpcwork/ad784563/data/oregon/fishtank.h5", "/hpcwork/ad784563/data/oregon/fusion.h5"],
+  [1, 2, 4, 8],
+  [1000, 10000],
   [10000000, 100000000],
-  ["diffuse_greater_limited_lesser_average"]
+  ["none", "diffuse_constant", "diffuse_lesser_average", "diffuse_greater_limited_lesser_average"]
 )
