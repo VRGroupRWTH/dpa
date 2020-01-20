@@ -23,7 +23,9 @@ struct particle
 
 #ifdef DPA_FTLE_SUPPORT
     archive & original_rank;
-    archive & original_position;
+    archive & original_position[0];
+    archive & original_position[1];
+    archive & original_position[2];
 #endif
   }
 
