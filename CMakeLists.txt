@@ -60,7 +60,7 @@ find_package  (nlohmann_json 3.7.0 REQUIRED)
 list          (APPEND PROJECT_LIBRARIES nlohmann_json::nlohmann_json)
 
 find_package  (TBB REQUIRED)
-list          (APPEND PROJECT_LIBRARIES TBB::tbb TBB::tbbmalloc)
+list          (APPEND PROJECT_LIBRARIES TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy)
   
 # ADD LIBRARIES HERE. Vcpkg toolchain file will automatically locate them.
 # Examples:
