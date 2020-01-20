@@ -5,6 +5,7 @@ INITIAL_DIRECTORY=$PWD
 # Enable modules.
 module swap intelmpi openmpi
 module load gcc/9 cmake/3.13.2
+module load python/3.6.0
 
 # Install git.
 cd ~

@@ -10,8 +10,9 @@ script_template = """#!/bin/bash
 #SBATCH --time=00:10:00
 #SBATCH --mem=192000M
 #SBATCH --nodes=$3
-#SBATCH --cpus-per-task=48
 #SBATCH --ntasks-per-node=1
+#SBATCH --sockets-per-node=2
+#SBATCH --cores-per-socket=24
 #SBATCH --account=rwth0432
 $MPIEXEC $FLAGS_MPI_BATCH $2 $1.json
 """
