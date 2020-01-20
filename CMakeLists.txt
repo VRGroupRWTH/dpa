@@ -62,6 +62,11 @@ list          (APPEND PROJECT_LIBRARIES nlohmann_json::nlohmann_json)
 find_package  (TBB REQUIRED)
 list          (APPEND PROJECT_LIBRARIES TBB::tbb TBB::tbbmalloc)
   
+if(LINUX)
+  find_package(Threads REQUIRED)
+  list        (APPEND PROJECT_LIBRARIES Threads::Threads)
+endif()
+
 # ADD LIBRARIES HERE. Vcpkg toolchain file will automatically locate them.
 # Examples:
 # - Header Only:
