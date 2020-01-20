@@ -8,7 +8,7 @@ if [ ! -f "vcpkg" ]; then ./bootstrap-vcpkg.sh; fi
 
 VCPKG_DEFAULT_TRIPLET=x64-linux
 vcpkg install boost-mpi boost-odeint boost-ublas catch2 Eigen3 hdf5[parallel] intel-mkl mpi nlohmann-json
-vcpkg install tbb:x64-linux-dynamic --overlay-triplets=../../utility/vcpkg/
+vcpkg install tbb --overlay-triplets=../../utility/vcpkg/
 cd ..
 
 cmake -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake ..
