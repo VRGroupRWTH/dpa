@@ -1,6 +1,6 @@
 #!/bin/sh
 
-directory = $PWD
+INITIAL_DIRECTORY = $PWD
 
 # Enable modules.
 module swap intelmpi openmpi
@@ -19,4 +19,4 @@ make
 make install
 export PATH=~/packages/bin:$PATH
 
-cd directory
+cd $INITIAL_DIRECTORY
