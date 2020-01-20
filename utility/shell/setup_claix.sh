@@ -1,6 +1,6 @@
 #!/bin/sh
 
-INITIAL_DIRECTORY = $PWD
+INITIAL_DIRECTORY=$PWD
 
 # Enable modules.
 module swap intelmpi openmpi
@@ -8,10 +8,9 @@ module load gcc/9 cmake/3.13.2
 
 # Install git.
 cd ~
-mkdir packages
+if [ ! -d "packages" ]; then mkdir packages; fi
 cd packages
-
-git clone --branch v2.24.0 https://github.com/git/git.git
+if [ ! -d "git" ]; then git clone --branch v2.24.0 https://github.com/git/git.git; fi
 cd git
 make configure
 ./configure --prefix=/home/ad784563/packages
