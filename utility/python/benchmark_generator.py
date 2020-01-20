@@ -55,7 +55,7 @@ def generate(
   configuration["particle_advector_particles_per_round"] = particles_per_round
   configuration["particle_advector_load_balancer"      ] = load_balancer
   configuration["particle_advector_integrator"         ] = "runge_kutta_4"
-  configuration["particle_advector_step_size"          ] = "0.001"
+  configuration["particle_advector_step_size"          ] = 0.001
   configuration["particle_advector_gather_particles"   ] = True
   configuration["particle_advector_record"             ] = True
   configuration["output_dataset_filepath"              ] = name + ".h5"
