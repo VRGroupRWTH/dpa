@@ -31,6 +31,10 @@ using imatrix2 = Eigen::Matrix2f;
 using imatrix3 = Eigen::Matrix3f;
 using imatrix4 = Eigen::Matrix4f;
 
+using aabb2    = Eigen::AlignedBox<scalar, 2>;
+using aabb3    = Eigen::AlignedBox<scalar, 3>;
+using aabb4    = Eigen::AlignedBox<scalar, 4>;
+
 template <typename type>
 type invalid_value ()
 {

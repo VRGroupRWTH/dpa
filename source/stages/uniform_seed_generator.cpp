@@ -6,8 +6,10 @@
 
 namespace dpa
 {
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate(const vector3& offset, const vector3& size, const vector3& stride, integer iterations, integer process_index)
+std::vector<particle<vector3, integer>> uniform_seed_generator::generate(const vector3& offset, const vector3& size, const vector3& stride, integer iterations, integer process_index, std::optional<aabb3> aabb)
 {
+  // TODO: If box, intersect box by offset/size and seed there.
+
   ivector3 particles_per_dimension = (size.array() / stride.array()).cast<integer>();
 
   std::vector<particle<vector3, integer>> particles(particles_per_dimension.prod());
