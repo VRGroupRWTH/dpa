@@ -54,13 +54,36 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     std::cout << "3.seed_generation\n";
     recorder.record("3.seed_generation"    , [&] ()
     {
-      particles = uniform_seed_generator::generate(
-        vector_fields[relative_direction::center].spacing.array() * partitioner.partitions().at(relative_direction::center).offset.cast<scalar>().array(),
-        vector_fields[relative_direction::center].spacing.array() * partitioner.block_size()                                      .cast<scalar>().array(), 
-        vector_fields[relative_direction::center].spacing.array() * arguments.seed_generation_stride.array(),
-        arguments.seed_generation_iterations, 
-        partitioner.cartesian_communicator()->rank(),
-        arguments.seed_generation_boundaries ? arguments.seed_generation_boundaries : std::nullopt);
+      auto offset        = vector_fields[relative_direction::center].spacing.array() * partitioner.partitions().at(relative_direction::center).offset.cast<scalar>().array();
+      auto size          = vector_fields[relative_direction::center].spacing.array() * partitioner.block_size()                                      .cast<scalar>().array();
+      auto iterations    = arguments.seed_generation_iterations;
+      auto process_index = partitioner.cartesian_communicator()->rank();
+      auto boundaries    = arguments.seed_generation_boundaries ? arguments.seed_generation_boundaries : std::nullopt;
+
+      if      (arguments.seed_generation_stride)
+        particles = uniform_seed_generator::generate(
+          offset       ,
+          size         , 
+          vector_fields[relative_direction::center].spacing.array() * arguments.seed_generation_stride->array(),
+          iterations   , 
+          process_index,
+          boundaries   );
+      else if (arguments.seed_generation_count)
+        particles = uniform_seed_generator::generate_random(
+          offset       ,
+          size         , 
+          *arguments.seed_generation_count,
+          iterations   , 
+          process_index,
+          boundaries   );
+      else if (arguments.seed_generation_range)
+        particles = uniform_seed_generator::generate_random(
+          offset       ,
+          size         , 
+          *arguments.seed_generation_range,
+          iterations   , 
+          process_index,
+          boundaries   );
     });
 
     particle_advector::output output   = {};

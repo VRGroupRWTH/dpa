@@ -12,7 +12,7 @@
 
 namespace dpa
 {
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate       (vector3 offset, vector3 size, vector3                    stride, integer iterations, integer process_index, std::optional<aabb3> aabb)
+std::vector<particle<vector3, integer>> uniform_seed_generator::generate       (vector3 offset, vector3 size, vector3  stride, integer iterations, integer process_index, std::optional<aabb3> aabb)
 {
   if (aabb)
   {
@@ -40,7 +40,7 @@ std::vector<particle<vector3, integer>> uniform_seed_generator::generate       (
   });
   return particles;
 }
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(vector3 offset, vector3 size, std::size_t                count , integer iterations, integer process_index, std::optional<aabb3> aabb) 
+std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(vector3 offset, vector3 size, integer  count , integer iterations, integer process_index, std::optional<aabb3> aabb)
 {
   if (aabb)
   {
@@ -74,7 +74,7 @@ std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(
   });
   return particles;
 }
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(vector3 offset, vector3 size, std::array<std::size_t, 2> range , integer iterations, integer process_index, std::optional<aabb3> aabb)
+std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(vector3 offset, vector3 size, ivector2 range , integer iterations, integer process_index, std::optional<aabb3> aabb)
 {
   std::random_device                         random_device;
   std::mt19937                               mersenne_twister(random_device());
