@@ -59,7 +59,8 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
         vector_fields[relative_direction::center].spacing.array() * partitioner.block_size()                                      .cast<scalar>().array(), 
         vector_fields[relative_direction::center].spacing.array() * arguments.seed_generation_stride.array(),
         arguments.seed_generation_iterations, 
-        partitioner.cartesian_communicator()->rank());
+        partitioner.cartesian_communicator()->rank(),
+        arguments.seed_generation_boundaries ? arguments.seed_generation_boundaries : std::nullopt);
     });
 
     particle_advector::output output   = {};

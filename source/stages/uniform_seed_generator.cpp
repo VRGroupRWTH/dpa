@@ -4,11 +4,22 @@
 
 #include <dpa/math/indexing.hpp>
 
+#undef min
+#undef max
+
 namespace dpa
 {
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate(const vector3& offset, const vector3& size, const vector3& stride, integer iterations, integer process_index, std::optional<aabb3> aabb)
+std::vector<particle<vector3, integer>> uniform_seed_generator::generate(vector3 offset, vector3 size, vector3 stride, integer iterations, integer process_index, std::optional<aabb3> aabb)
 {
-  // TODO: If box, intersect box by offset/size and seed there.
+  if (aabb)
+  {
+    auto intersection = aabb->intersection(aabb3(offset, offset + size));
+    if (!intersection.isEmpty())
+    {
+      offset = intersection.min  ();
+      size   = intersection.sizes();
+    }
+  }
 
   ivector3 particles_per_dimension = (size.array() / stride.array()).cast<integer>();
 

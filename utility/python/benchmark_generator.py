@@ -22,6 +22,7 @@ def generate(
   input_dataset_filepath ,
   stride                 ,
   iterations             ,
+  boundaries             ,
   particles_per_round    ,
   load_balancer          ):
   load_balancer_shorthand = "none"
@@ -36,6 +37,12 @@ def generate(
     "_n"   + str(nodes)               + 
     "_s"   + str(stride)              + 
     "_i"   + str(iterations)          + 
+    "_b"   + str(boundaries["minimum"][0]) + ","
+           + str(boundaries["minimum"][1]) + ","
+           + str(boundaries["minimum"][2]) + ","
+           + str(boundaries["maximum"][0]) + ","
+           + str(boundaries["maximum"][1]) + ","
+           + str(boundaries["maximum"][2]) +
     "_ppr" + str(particles_per_round) + 
     "_lb_" + load_balancer_shorthand)
 
@@ -52,6 +59,7 @@ def generate(
   configuration["input_dataset_spacing_name"           ] = "spacing"
   configuration["seed_generation_stride"               ] = [stride, stride, stride]
   configuration["seed_generation_iterations"           ] = iterations
+  configuration["seed_generation_boundaries"           ] = boundaries
   configuration["particle_advector_particles_per_round"] = particles_per_round
   configuration["particle_advector_load_balancer"      ] = load_balancer
   configuration["particle_advector_integrator"         ] = "runge_kutta_4"
@@ -67,21 +75,24 @@ def combine(
   input_dataset_filepath ,
   stride                 ,
   iterations             ,
+  boundaries             ,
   particles_per_round    ,
   load_balancer          ):
   for n in nodes: 
     for d in input_dataset_filepath:
       for s in stride:
         for i in iterations:
-          for ppr in particles_per_round:
-            for lb in load_balancer:
-              generate(n, d, s, i, ppr, lb)
+          for b in boundaries:
+            for ppr in particles_per_round:
+              for lb in load_balancer:
+                generate(n, d, s, i, b, ppr, lb)
 
 combine(
   [32, 64, 128, 256],
   ["/hpcwork/ad784563/data/oregon/astro.h5", "/hpcwork/ad784563/data/oregon/fishtank.h5", "/hpcwork/ad784563/data/oregon/fusion.h5"],
   [1, 2, 4, 8],
   [1000, 10000],
+  [{"minimum": [0.4, 0.4, 0.4], "maximum": [0.6, 0.6, 0.6]}],
   [10000000, 100000000],
   ["none", "diffuse_constant", "diffuse_lesser_average", "diffuse_greater_limited_lesser_average"]
 )

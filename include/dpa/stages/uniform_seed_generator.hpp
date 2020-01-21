@@ -12,7 +12,7 @@ namespace dpa
 class uniform_seed_generator
 {
 public:
-  static std::vector<particle<vector3, integer>> generate(const vector3& offset, const vector3& size, const vector3& stride, integer iterations, integer process_index, std::optional<aabb3> aabb = std::nullopt);
+  static std::vector<particle<vector3, integer>> generate(vector3 offset, vector3 size, vector3 stride, integer iterations, integer process_index, std::optional<aabb3> aabb = std::nullopt);
 
   // TODO: Seeds from radius, generated within the sphere enclosed by it.
   // TODO: Seeds from vector of particles     (read in parallel, then distributed all to all, also from file of 1D vector3 array).

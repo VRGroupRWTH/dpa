@@ -27,6 +27,15 @@ arguments argument_parser::parse(const std::string& filepath)
   arguments.particle_advector_gather_particles    = json["particle_advector_gather_particles"   ]   .get<bool>       ();
   arguments.particle_advector_record              = json["particle_advector_record"             ]   .get<bool>       ();
   arguments.output_dataset_filepath               = json["output_dataset_filepath"              ]   .get<std::string>();
+
+  if (json.contains("seed_generation_boundaries"))
+  {
+    auto boundaries = json["seed_generation_boundaries"];
+    arguments.seed_generation_boundaries = aabb3(
+      vector3(boundaries["minimum"][0].get<scalar>(), boundaries["minimum"][1].get<scalar>(), boundaries["minimum"][2].get<scalar>()),
+      vector3(boundaries["maximum"][0].get<scalar>(), boundaries["maximum"][1].get<scalar>(), boundaries["maximum"][2].get<scalar>()));
+  } 
+
   return arguments;
 }
 }
