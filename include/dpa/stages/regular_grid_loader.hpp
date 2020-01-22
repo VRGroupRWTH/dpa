@@ -23,11 +23,11 @@ public:
   regular_grid_loader& operator=(const regular_grid_loader&  that) = delete ;
   regular_grid_loader& operator=(      regular_grid_loader&& temp) = default;
 
-  ivector3                                                        load_dimensions   ();
+  svector3                                                        load_dimensions   ();
   std::unordered_map<relative_direction, regular_vector_field_3d> load_vector_fields(const bool load_neighbors);
 
 protected:
-  regular_vector_field_3d                                         load_vector_field (const ivector3& offset, const ivector3& size);
+  regular_vector_field_3d                                         load_vector_field (const svector3& offset, const svector3& size);
 
   domain_partitioner* partitioner_ = nullptr;
   hid_t               file_        = 0;

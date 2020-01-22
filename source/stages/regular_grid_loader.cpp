@@ -22,7 +22,7 @@ regular_grid_loader::~regular_grid_loader()
   H5Fclose(file_   );
 }
 
-ivector3                                                        regular_grid_loader::load_dimensions   ()
+svector3                                                        regular_grid_loader::load_dimensions   ()
 {
   std::array<hsize_t, 4> dimensions {0, 0, 0, 0};
 
@@ -30,7 +30,7 @@ ivector3                                                        regular_grid_loa
   H5Sget_simple_extent_dims(space, dimensions.data(), nullptr);
   H5Sclose(space);
 
-  return ivector3(dimensions[0], dimensions[1], dimensions[2]);
+  return svector3(dimensions[0], dimensions[1], dimensions[2]);
 }
 std::unordered_map<relative_direction, regular_vector_field_3d> regular_grid_loader::load_vector_fields(const bool load_neighbors)
 {
@@ -52,7 +52,7 @@ std::unordered_map<relative_direction, regular_vector_field_3d> regular_grid_loa
   return vector_fields;
 }
 
-regular_vector_field_3d                                         regular_grid_loader::load_vector_field (const ivector3& offset, const ivector3& size)
+regular_vector_field_3d                                         regular_grid_loader::load_vector_field (const svector3& offset, const svector3& size)
 {
   regular_vector_field_3d vector_field {boost::multi_array<vector3, 3>(boost::extents[size[0]][size[1]][size[2]])};
 

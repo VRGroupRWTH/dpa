@@ -34,16 +34,16 @@ def generate(
     load_balancer_shorthand = "gllma"
   
   name = (Path(input_dataset_filepath).resolve().stem + 
-    "_n"   + str(nodes)               + 
-    "_s"   + str(stride)              + 
-    "_i"   + str(iterations)          + 
+    "_n"   + str(nodes)  + 
+    "_s"   + str(stride) + 
+    "_i"   + iterations  + 
     "_b"   + str(boundaries["minimum"][0]) + ","
            + str(boundaries["minimum"][1]) + ","
            + str(boundaries["minimum"][2]) + ","
            + str(boundaries["maximum"][0]) + ","
            + str(boundaries["maximum"][1]) + ","
            + str(boundaries["maximum"][2]) +
-    "_ppr" + str(particles_per_round) + 
+    "_ppr" + particles_per_round + 
     "_lb_" + load_balancer_shorthand)
 
   script = (script_template.
@@ -90,9 +90,9 @@ def combine(
 combine(
   [32, 64, 128, 256],
   ["/hpcwork/ad784563/data/oregon/astro.h5", "/hpcwork/ad784563/data/oregon/fishtank.h5", "/hpcwork/ad784563/data/oregon/fusion.h5"],
-  [1, 2, 4, 8],
-  [1000, 10000],
+  [1.0, 2.0, 4.0, 8.0],
+  ["1000", "10000"],
   [{"minimum": [0.4, 0.4, 0.4], "maximum": [0.6, 0.6, 0.6]}],
-  [10000000, 100000000],
+  ["10000000", "100000000"],
   ["none", "diffuse_constant", "diffuse_lesser_average", "diffuse_greater_limited_lesser_average"]
 )

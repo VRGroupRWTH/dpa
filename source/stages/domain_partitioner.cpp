@@ -4,12 +4,12 @@
 
 namespace dpa
 {
-void                                                                         domain_partitioner::set_domain_size       (const ivector3& domain_size, const ivector3& ghost_cell_size)
+void                                                                         domain_partitioner::set_domain_size       (const svector3& domain_size, const svector3& ghost_cell_size)
 {
   domain_size_     = domain_size;
   ghost_cell_size_ = ghost_cell_size;
 
-  auto prime_factors = prime_factorize(communicator_.size());
+  auto prime_factors = prime_factorize(static_cast<size>(communicator_.size()));
   auto current_size  = domain_size_;
   grid_size_.setConstant(1);
   while (!prime_factors.empty())
@@ -27,9 +27,9 @@ void                                                                         dom
   block_size_             = domain_size_.array() / grid_size_.array();
   cartesian_communicator_ = std::make_unique<boost::mpi::cartesian_communicator>(communicator_, boost::mpi::cartesian_topology(std::vector<boost::mpi::cartesian_dimension>
   {
-    boost::mpi::cartesian_dimension(grid_size_[0]),
-    boost::mpi::cartesian_dimension(grid_size_[1]),
-    boost::mpi::cartesian_dimension(grid_size_[2])
+    boost::mpi::cartesian_dimension(static_cast<integer>(grid_size_[0])),
+    boost::mpi::cartesian_dimension(static_cast<integer>(grid_size_[1])),
+    boost::mpi::cartesian_dimension(static_cast<integer>(grid_size_[2]))
   }));
 
   partitions_.clear();
@@ -54,15 +54,15 @@ boost::mpi::cartesian_communicator*                                          dom
 {
   return cartesian_communicator_.get();
 }
-const ivector3&                                                              domain_partitioner::domain_size           () const
+const svector3&                                                              domain_partitioner::domain_size           () const
 {                                    
   return domain_size_;               
 }                                    
-const ivector3&                                                              domain_partitioner::grid_size             () const
+const svector3&                                                              domain_partitioner::grid_size             () const
 {                                    
   return grid_size_;                 
 }                                    
-const ivector3&                                                              domain_partitioner::block_size            () const
+const svector3&                                                              domain_partitioner::block_size            () const
 {                                    
   return block_size_;
 }
@@ -96,10 +96,10 @@ domain_partitioner::partition                                                dom
 {
   const auto raw_multi_rank = cartesian_communicator_->coordinates(rank);
   const auto multi_rank     = ivector3(raw_multi_rank[0], raw_multi_rank[1], raw_multi_rank[2]);
-  const auto offset         = block_size_.array() * multi_rank.array();
+  const auto offset         = block_size_.array() * multi_rank.cast<size>().array();
 
-  auto ghosted_offset = ivector3();
-  auto ghosted_size   = ivector3();
+  auto ghosted_offset = svector3();
+  auto ghosted_size   = svector3();
   for (auto i = 0; i < 3; ++i)
   {
     if (offset[i] >= ghost_cell_size_ [i])

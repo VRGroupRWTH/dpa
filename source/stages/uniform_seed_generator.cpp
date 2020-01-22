@@ -12,7 +12,7 @@
 
 namespace dpa
 {
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate       (vector3 offset, vector3 size, vector3  stride, integer iterations, integer process_index, std::optional<aabb3> aabb)
+std::vector<particle_3d> uniform_seed_generator::generate       (vector3 offset, vector3 size, vector3   stride, dpa::size iterations, integer process_index, std::optional<aabb3> aabb)
 {
   if (aabb)
   {
@@ -24,12 +24,12 @@ std::vector<particle<vector3, integer>> uniform_seed_generator::generate       (
     }
   }
 
-  ivector3 particles_per_dimension = (size.array() / stride.array()).cast<integer>();
+  svector3 particles_per_dimension = (size.array() / stride.array()).cast<dpa::size>();
 
-  std::vector<particle<vector3, integer>> particles(particles_per_dimension.prod());
+  std::vector<particle_3d> particles(particles_per_dimension.prod());
   tbb::parallel_for(std::size_t(0), particles.size(), std::size_t(1), [&] (const std::size_t index)
   {
-    const ivector3 multi_index = unravel_index(index, particles_per_dimension);
+    const svector3 multi_index = unravel_index(index, particles_per_dimension);
     const vector3  position    = offset.array() + stride.array() * multi_index.cast<scalar>().array();
 
 #ifdef DPA_FTLE_SUPPORT
@@ -40,7 +40,7 @@ std::vector<particle<vector3, integer>> uniform_seed_generator::generate       (
   });
   return particles;
 }
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(vector3 offset, vector3 size, integer  count , integer iterations, integer process_index, std::optional<aabb3> aabb)
+std::vector<particle_3d> uniform_seed_generator::generate_random(vector3 offset, vector3 size, dpa::size count , dpa::size iterations, integer process_index, std::optional<aabb3> aabb)
 {
   if (aabb)
   {
@@ -59,7 +59,7 @@ std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(
     std::initializer_list {offset[2], offset[2] + size[2]}
   };
 
-  std::vector<particle<vector3, integer>> particles(count);
+  std::vector<particle_3d> particles(count);
   tbb::parallel_for(std::size_t(0), particles.size(), std::size_t(1), [&] (const std::size_t index)
   {
     static thread_local std::random_device     random_device   ;
@@ -74,11 +74,11 @@ std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(
   });
   return particles;
 }
-std::vector<particle<vector3, integer>> uniform_seed_generator::generate_random(vector3 offset, vector3 size, ivector2 range , integer iterations, integer process_index, std::optional<aabb3> aabb)
+std::vector<particle_3d> uniform_seed_generator::generate_random(vector3 offset, vector3 size, svector2  range , dpa::size iterations, integer process_index, std::optional<aabb3> aabb)
 {
-  std::random_device                         random_device;
-  std::mt19937                               mersenne_twister(random_device());
-  std::uniform_int_distribution<std::size_t> distribution(range[0], range[1]);
+  std::random_device                       random_device;
+  std::mt19937                             mersenne_twister(random_device());
+  std::uniform_int_distribution<dpa::size> distribution(range[0], range[1]);
   return generate_random(offset, size, distribution(mersenne_twister), iterations, process_index, aabb);
 }
 }

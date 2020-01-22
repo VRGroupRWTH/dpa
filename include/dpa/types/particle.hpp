@@ -8,7 +8,7 @@
 namespace dpa
 {
 // Ducks [] on the position_type.
-template <typename position_type, typename integer_type>
+template <typename position_type, typename size_type>
 struct particle
 {
   // Function for boost::serialization which is used by boost::mpi.
@@ -30,14 +30,18 @@ struct particle
   }
 
   position_type           position             = {};
-  integer_type            remaining_iterations = 0 ;
+  size_type               remaining_iterations = 0 ;
   dpa::relative_direction relative_direction   = dpa::relative_direction::center;
 
 #ifdef DPA_FTLE_SUPPORT
-  integer_type       original_rank        = 0 ;
-  position_type      original_position    = position;
+  integer_type            original_rank        = 0 ;
+  position_type           original_position    = position;
 #endif
 };
+
+using particle_2d = particle<vector2, size>;
+using particle_3d = particle<vector3, size>;
+using particle_4d = particle<vector4, size>;
 }
 
 #endif

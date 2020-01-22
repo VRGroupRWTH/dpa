@@ -15,22 +15,27 @@ namespace dpa
 {
 using scalar   = float;
 using integer  = std::int32_t;
+using size     = std::size_t;
                
-using vector2  = Eigen::Vector2f;
-using vector3  = Eigen::Vector3f;
-using vector4  = Eigen::Vector4f;
-               
-using ivector2 = Eigen::Vector2i;
-using ivector3 = Eigen::Vector3i;
-using ivector4 = Eigen::Vector4i;
-               
-using matrix2  = Eigen::Matrix2f;
-using matrix3  = Eigen::Matrix3f;
-using matrix4  = Eigen::Matrix4f;
-               
-using imatrix2 = Eigen::Matrix2f;
-using imatrix3 = Eigen::Matrix3f;
-using imatrix4 = Eigen::Matrix4f;
+using vector2  = Eigen::Matrix<scalar , 2, 1>;
+using vector3  = Eigen::Matrix<scalar , 3, 1>;
+using vector4  = Eigen::Matrix<scalar , 4, 1>;
+using ivector2 = Eigen::Matrix<integer, 2, 1>;
+using ivector3 = Eigen::Matrix<integer, 3, 1>;
+using ivector4 = Eigen::Matrix<integer, 4, 1>;
+using svector2 = Eigen::Matrix<size   , 2, 1>;
+using svector3 = Eigen::Matrix<size   , 3, 1>;
+using svector4 = Eigen::Matrix<size   , 4, 1>;
+
+using matrix2  = Eigen::Matrix<scalar , 2, 2>;
+using matrix3  = Eigen::Matrix<scalar , 3, 3>;
+using matrix4  = Eigen::Matrix<scalar , 4, 4>;
+using imatrix2 = Eigen::Matrix<integer, 2, 2>;
+using imatrix3 = Eigen::Matrix<integer, 3, 3>;
+using imatrix4 = Eigen::Matrix<integer, 4, 4>;
+using smatrix2 = Eigen::Matrix<size   , 2, 2>;
+using smatrix3 = Eigen::Matrix<size   , 3, 3>;
+using smatrix4 = Eigen::Matrix<size   , 4, 4>;
 
 using aabb2    = Eigen::AlignedBox<scalar, 2>;
 using aabb3    = Eigen::AlignedBox<scalar, 3>;
@@ -82,6 +87,21 @@ struct vector_traits<integer, 4>
 {
   using type = ivector4;
 };
+template <>
+struct vector_traits<size   , 2>
+{
+  using type = svector2;
+};
+template <>
+struct vector_traits<size   , 3>
+{
+  using type = svector3;
+};
+template <>
+struct vector_traits<size   , 4>
+{
+  using type = svector4;
+};
 
 template <typename type, std::size_t dimensions>
 struct matrix_traits
@@ -117,6 +137,21 @@ template <>
 struct matrix_traits<integer, 4>
 {
   using type = imatrix4;
+};
+template <>
+struct matrix_traits<size   , 2>
+{
+  using type = smatrix2;
+};
+template <>
+struct matrix_traits<size   , 3>
+{
+  using type = smatrix3;
+};
+template <>
+struct matrix_traits<size   , 4>
+{
+  using type = smatrix4;
 };
 }
 
