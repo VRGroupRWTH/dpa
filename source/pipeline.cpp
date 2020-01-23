@@ -36,14 +36,14 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       arguments.particle_advector_record             );
 
     auto vector_fields   = std::unordered_map<relative_direction, regular_vector_field_3d>();
-    auto particles       = std::vector<particle<vector3, integer>>();
+    auto particles       = std::vector<particle_3d>();
 
-    std::cout << "1.domain_partitioning\n";
+    std::cout    << "1.domain_partitioning\n";
     recorder.record("1.domain_partitioning", [&] ()
     {
       partitioner.set_domain_size(loader.load_dimensions(), ivector3::Ones());
     });
-    std::cout << "2.data_loading\n";
+    std::cout    << "2.data_loading\n";
     recorder.record("2.data_loading"       , [&] ()
     {
       vector_fields = loader.load_vector_fields(
@@ -51,7 +51,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
         arguments.particle_advector_load_balancer == "diffuse_lesser_average"                 || 
         arguments.particle_advector_load_balancer == "diffuse_greater_limited_lesser_average" );
     });
-    std::cout << "3.seed_generation\n";
+    std::cout    << "3.seed_generation\n";
     recorder.record("3.seed_generation"    , [&] ()
     {
       auto offset        = vector_fields[relative_direction::center].spacing.array() * partitioner.partitions().at(relative_direction::center).offset.cast<scalar>().array();
@@ -86,61 +86,62 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
           boundaries   );
     });
 
+    particle_advector::state  state    = {vector_fields, particles}; // TODO: Initialize load_balanced_particles.
     particle_advector::output output   = {};
     integer                   rounds   = 0;
     bool                      complete = false;
     while (!complete)
     {
-      particle_advector::round_info round_info;
-      std::cout << "4.1." + std::to_string(rounds) + ".load_balance_distribute\n";
+      particle_advector::round_state round_state;
+      std::cout    << "4.1." + std::to_string(rounds) + ".load_balance_distribute\n";
       recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
       {
-                     advector.load_balance_distribute (               particles                                                      );
+                     advector.load_balance_distribute (state);
       });
-      std::cout << "4.2." + std::to_string(rounds) + ".compute_round_info\n";
-      recorder.record("4.2." + std::to_string(rounds) + ".compute_round_info"      , [&] ()
+      std::cout    << "4.2." + std::to_string(rounds) + ".compute_round_state\n";
+      recorder.record("4.2." + std::to_string(rounds) + ".compute_round_state"      , [&] ()
       {
-        round_info = advector.compute_round_info      (               particles                                                      );
+        round_state = advector.compute_round_state    (state);
       });
-      std::cout << "4.3." + std::to_string(rounds) + ".allocate_integral_curves\n";
+      std::cout    << "4.3." + std::to_string(rounds) + ".allocate_integral_curves\n";
       recorder.record("4.3." + std::to_string(rounds) + ".allocate_integral_curves", [&] ()
       {
-                     advector.allocate_integral_curves(                                            output.integral_curves, round_info);
+                     advector.allocate_integral_curves(       round_state, output);
       });
-      std::cout << "4.4." + std::to_string(rounds) + ".advect\n";
+      std::cout    << "4.4." + std::to_string(rounds) + ".advect\n";
       recorder.record("4.4." + std::to_string(rounds) + ".advect"                  , [&] ()
       {
-                     advector.advect                  (vector_fields, particles, output.particles, output.integral_curves, round_info);
+                     advector.advect                  (state, round_state, output);
       });
-      std::cout << "4.5." + std::to_string(rounds) + ".load_balance_collect\n";
+      std::cout    << "4.5." + std::to_string(rounds) + ".load_balance_collect\n";
       recorder.record("4.5." + std::to_string(rounds) + ".load_balance_collect"    , [&] ()
       {
-                     advector.load_balance_collect    (vector_fields,            output.particles,                         round_info);
+                     advector.load_balance_collect    (state, round_state, output);
       });
-      std::cout << "4.6." + std::to_string(rounds) + ".out_of_bounds_distribute\n";
+      std::cout    << "4.6." + std::to_string(rounds) + ".out_of_bounds_distribute\n";
       recorder.record("4.6." + std::to_string(rounds) + ".out_of_bounds_distribute", [&] ()
       {
-                     advector.out_of_bounds_distribute(               particles,                                           round_info);
+                     advector.out_of_bounds_distribute(state, round_state);
       });
-      std::cout << "4.7." + std::to_string(rounds) + ".check_completion\n";
+      std::cout    << "4.7." + std::to_string(rounds) + ".check_completion\n";
       recorder.record("4.7." + std::to_string(rounds) + ".check_completion"        , [&] ()
       {
-        complete =   advector.check_completion        (               particles                                                      );
+        complete =   advector.check_completion        (state);
       });  
       rounds++;
     }
-    std::cout << "4.8.gather_particles\n";
+    std::cout    << "4.8.gather_particles\n";
     recorder.record("4.8.gather_particles"     , [&] ()
     {
-      advector.gather_particles     (output.particles);
+      advector.gather_particles     (output);
     });
-    std::cout << "4.9.prune_integral_curves\n";
+    std::cout    << "4.9.prune_integral_curves\n";
     recorder.record("4.9.prune_integral_curves", [&] ()
     {
-      advector.prune_integral_curves(output.integral_curves);
+      advector.prune_integral_curves(output);
     });
 
-    std::cout << "5.data_saving\n";
+    std::cout    << "5.data_saving\n";
     recorder.record("5.data_saving"            , [&] ()
     {
       if (arguments.particle_advector_record)

@@ -34,7 +34,7 @@ particle_advector::particle_advector(domain_partitioner* partitioner, const inte
   else if (integrator == "adams_bashforth_moulton_2"   ) integrator_ = adams_bashforth_moulton_2_integrator   <vector3>();
 }
 
-particle_advector::output     particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& particles)
+particle_advector::output     particle_advector::advect                  (const vector_fields& vector_fields,       particles& particles)
 {
   output output;
   while (!check_completion(particles))
@@ -51,7 +51,7 @@ particle_advector::output     particle_advector::advect                  (const 
   return output;
 }
 
-bool                          particle_advector::check_completion        (                                                                                      const std::vector<particle<vector3, integer>>& particles) 
+bool                          particle_advector::check_completion        (                                    const particles& active_particles) 
 { 
   std::vector<std::size_t> particle_sizes;
   boost::mpi::gather   (*partitioner_->cartesian_communicator(), particles.size(), particle_sizes, 0);
@@ -59,7 +59,7 @@ bool                          particle_advector::check_completion        (      
   boost::mpi::broadcast(*partitioner_->cartesian_communicator(), complete, 0);
   return complete;
 }
-void                          particle_advector::load_balance_distribute (                                                                                            std::vector<particle<vector3, integer>>& particles)
+void                          particle_advector::load_balance_distribute (                                          particles& active_particles)
 {
   if (load_balancer_ == load_balancer::none) return;
 
@@ -243,7 +243,7 @@ void                          particle_advector::load_balance_distribute (      
 #endif
   }
 }
-particle_advector::round_info particle_advector::compute_round_info      (                                                                                      const std::vector<particle<vector3, integer>>& particles) 
+particle_advector::round_info particle_advector::compute_round_info      (                                    const particles& active_particles) 
 {
   round_info round_info;
   round_info.particle_count = std::min(std::size_t(particles_per_round_), particles.size());
@@ -269,7 +269,7 @@ void                          particle_advector::allocate_integral_curves(      
 
   integral_curves.emplace_back().resize(round_info.vertex_count, invalid_value<vector3>());
 }
-void                          particle_advector::advect                  (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,       std::vector<particle<vector3, integer>>& particles, std::vector<particle<vector3, integer>>& inactive_particles, integral_curves_3d& integral_curves,       round_info& round_info)
+void                          particle_advector::advect                  (const vector_fields& vector_fields,       particles& active_particles, std::vector<particle<vector3, integer>>& inactive_particles, integral_curves_3d& integral_curves,       round_info& round_info)
 {
   tbb::mutex mutex;
   tbb::parallel_for(std::size_t(0), round_info.particle_count, std::size_t(1), [&] (const std::size_t particle_index)
@@ -358,7 +358,7 @@ void                          particle_advector::advect                  (const 
   });
   particles.resize(particles.size() - round_info.particle_count);
 }
-void                          particle_advector::load_balance_collect    (const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields,                                                           std::vector<particle<vector3, integer>>& inactive_particles,                                            round_info& round_info) 
+void                          particle_advector::load_balance_collect    (const vector_fields& vector_fields,                                    std::vector<particle<vector3, integer>>& inactive_particles,                                            round_info& round_info) 
 {
   if (load_balancer_ == load_balancer::none) return;
 
@@ -414,7 +414,7 @@ void                          particle_advector::load_balance_collect    (const 
 #endif
   }
 }                                                                                                                                                                                                                         
-void                          particle_advector::out_of_bounds_distribute(                                                                                            std::vector<particle<vector3, integer>>& particles,                                                                                                   const round_info& round_info) 
+void                          particle_advector::out_of_bounds_distribute(                                                                                            particles& active_particles,                                                                                                   const round_info& round_info) 
 {
 #ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
   // TODO: Neighborhood collectives.
@@ -437,7 +437,7 @@ void                          particle_advector::out_of_bounds_distribute(      
     request.wait();
 #endif
 }
-void                          particle_advector::gather_particles        (                                                                                            std::vector<particle<vector3, integer>>& particles)
+void                          particle_advector::gather_particles        (                                                                                            particles& active_particles)
 {
   if (!gather_particles_) return;
 
