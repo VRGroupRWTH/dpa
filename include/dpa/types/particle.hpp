@@ -31,7 +31,7 @@ struct particle
 
   position_type           position             = {};
   size_type               remaining_iterations = 0 ;
-  dpa::relative_direction relative_direction   = dpa::relative_direction::center;
+  dpa::relative_direction relative_direction   = center;
 
 #ifdef DPA_FTLE_SUPPORT
   integer_type            original_rank        = 0 ;

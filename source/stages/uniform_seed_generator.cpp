@@ -33,9 +33,9 @@ std::vector<particle_3d> uniform_seed_generator::generate       (vector3 offset,
     const vector3  position    = offset.array() + stride.array() * multi_index.cast<scalar>().array();
 
 #ifdef DPA_FTLE_SUPPORT
-    particles[index]           = {position, iterations, relative_direction::center, process_index};
+    particles[index]           = {position, iterations, center, process_index};
 #else
-    particles[index]           = {position, iterations, relative_direction::center};
+    particles[index]           = {position, iterations, center};
 #endif
   });
   return particles;
@@ -63,13 +63,13 @@ std::vector<particle_3d> uniform_seed_generator::generate_random(vector3 offset,
   tbb::parallel_for(std::size_t(0), particles.size(), std::size_t(1), [&] (const std::size_t index)
   {
     static thread_local std::random_device     random_device   ;
-    static thread_local std::mt19937           mersenne_twister;
-    multivariate_uniform_distribution<vector3> distribution(distribution_range);
+    static thread_local std::mt19937           mersenne_twister(random_device());
+    multivariate_uniform_distribution<vector3> distribution    (distribution_range);
 
 #ifdef DPA_FTLE_SUPPORT
-    particles[index] = {distribution(mersenne_twister), iterations, relative_direction::center, process_index};
+    particles[index] = {distribution(mersenne_twister), iterations, center, process_index};
 #else
-    particles[index] = {distribution(mersenne_twister), iterations, relative_direction::center};
+    particles[index] = {distribution(mersenne_twister), iterations, center};
 #endif
   });
   return particles;
@@ -78,7 +78,7 @@ std::vector<particle_3d> uniform_seed_generator::generate_random(vector3 offset,
 {
   std::random_device                       random_device;
   std::mt19937                             mersenne_twister(random_device());
-  std::uniform_int_distribution<dpa::size> distribution(range[0], range[1]);
+  std::uniform_int_distribution<dpa::size> distribution    (range[0], range[1]);
   return generate_random(offset, size, distribution(mersenne_twister), iterations, process_index, aabb);
 }
 }

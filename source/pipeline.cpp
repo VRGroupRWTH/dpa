@@ -35,13 +35,13 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       arguments.particle_advector_gather_particles   ,
       arguments.particle_advector_record             );
 
-    auto vector_fields   = std::unordered_map<relative_direction, regular_vector_field_3d>();
-    auto particles       = std::vector<particle_3d>();
+    auto vector_fields = std::unordered_map<relative_direction, regular_vector_field_3d>();
+    auto particles     = std::vector<particle_3d>();
 
     std::cout    << "1.domain_partitioning\n";
     recorder.record("1.domain_partitioning", [&] ()
     {
-      partitioner.set_domain_size(loader.load_dimensions(), ivector3::Ones());
+      partitioner.set_domain_size(loader.load_dimensions(), svector3::Ones());
     });
     std::cout    << "2.data_loading\n";
     recorder.record("2.data_loading"       , [&] ()
@@ -54,8 +54,8 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     std::cout    << "3.seed_generation\n";
     recorder.record("3.seed_generation"    , [&] ()
     {
-      auto offset        = vector_fields[relative_direction::center].spacing.array() * partitioner.partitions().at(relative_direction::center).offset.cast<scalar>().array();
-      auto size          = vector_fields[relative_direction::center].spacing.array() * partitioner.block_size()                                      .cast<scalar>().array();
+      auto offset        = vector_fields[center].spacing.array() * partitioner.partitions().at(center).offset.cast<scalar>().array();
+      auto size          = vector_fields[center].spacing.array() * partitioner.block_size()                                      .cast<scalar>().array();
       auto iterations    = arguments.seed_generation_iterations;
       auto process_index = partitioner.cartesian_communicator()->rank();
       auto boundaries    = arguments.seed_generation_boundaries ? arguments.seed_generation_boundaries : std::nullopt;
@@ -64,7 +64,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
         particles = uniform_seed_generator::generate(
           offset       ,
           size         , 
-          vector_fields[relative_direction::center].spacing.array() * arguments.seed_generation_stride->array(),
+          vector_fields[center].spacing.array() * arguments.seed_generation_stride->array(),
           iterations   , 
           process_index,
           boundaries   );
@@ -86,13 +86,13 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
           boundaries   );
     });
 
-    particle_advector::state  state    = {vector_fields, particles}; // TODO: Initialize load_balanced_particles.
+    particle_advector::state  state    = {vector_fields, particles, partitioner.partitions()};
     particle_advector::output output   = {};
     integer                   rounds   = 0;
     bool                      complete = false;
     while (!complete)
     {
-      particle_advector::round_state round_state;
+      particle_advector::round_state round_state(partitioner.partitions());
       std::cout    << "4.1." + std::to_string(rounds) + ".load_balance_distribute\n";
       recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
       {

@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_vector.h>
 
 #include <dpa/stages/domain_partitioner.hpp>
 #include <dpa/types/basic_types.hpp>
@@ -22,28 +22,60 @@ class pipeline;
 class particle_advector
 {
 public:
-  using vector_field_map  = std::unordered_map<relative_direction, regular_vector_field_3d>;
-  using particle_vector   = std::vector<particle_3d>;
-  using out_of_bounds_map = tbb::concurrent_hash_map<relative_direction, particle_vector>;
+  using vector_field_map           = std::unordered_map    <relative_direction, regular_vector_field_3d>;
+  using particle_vector            = std::vector           <particle_3d>;
+  using particle_map               = std::unordered_map    <relative_direction, particle_vector>;
+  using concurrent_particle_vector = tbb::concurrent_vector<particle_3d>;
+  using concurrent_particle_map    = std::unordered_map    <relative_direction, concurrent_particle_vector>;
 
   struct state
   {
-    const vector_fields&                              vector_fields;
-    particles&                                        active_particles               {};
-    std::unordered_map<relative_direction, particles> active_load_balanced_particles {};
+    state           (const vector_field_map& vector_fields, particle_vector& active_particles, const std::unordered_map<relative_direction, domain_partitioner::partition>& partitions)
+    : vector_fields(vector_fields), active_particles(active_particles)
+    {
+      for (auto& partition : partitions)
+        if (partition.first != center)
+          load_balanced_active_particles.emplace(partition.first, particle_vector());
+    }
+    state           (const state&  that) = default;
+    state           (      state&& temp) = default;
+   ~state           ()                   = default;
+    state& operator=(const state&  that) = default;
+    state& operator=(      state&& temp) = default;
+
+    const vector_field_map&    vector_fields;
+    particle_vector&           active_particles;
+    particle_map               load_balanced_active_particles        {};
   };
   struct round_state
   {
-    std::size_t       particle_count                        = 0;
-    std::size_t       curve_stride                          = 0;
-    std::size_t       vertex_count                          = 0;
-    out_of_bounds_map out_of_bounds_particles               {};
-    out_of_bounds_map load_balanced_out_of_bounds_particles {};
+    explicit round_state  (const std::unordered_map<relative_direction, domain_partitioner::partition>& partitions)
+    {
+      for (auto& partition : partitions)
+      {
+        if (partition.first != center)
+        {
+          out_of_bounds_particles              .emplace(partition.first, concurrent_particle_vector());
+          load_balanced_out_of_bounds_particles.emplace(partition.first, concurrent_particle_vector()); 
+        }
+      }
+    }
+    round_state           (const round_state&  that) = default;
+    round_state           (      round_state&& temp) = default;
+   ~round_state           ()                         = default;
+    round_state& operator=(const round_state&  that) = default;
+    round_state& operator=(      round_state&& temp) = default;
+
+    std::size_t                particle_count                        = 0;
+    std::size_t                curve_stride                          = 0;
+    std::size_t                vertex_count                          = 0;
+    concurrent_particle_map    out_of_bounds_particles               {};
+    concurrent_particle_map    load_balanced_out_of_bounds_particles {};
   };
   struct output
   {
-    particles          inactive_particles {}; // Implicitly the inactive particles vector.
-    integral_curves_3d integral_curves    {};
+    concurrent_particle_vector inactive_particles                    {}; // Implicitly the inactive particles vector.
+    integral_curves_3d         integral_curves                       {};
   };
 
   struct load_balancing_info
@@ -81,7 +113,7 @@ public:
 
   explicit particle_advector  (
     domain_partitioner* partitioner        , 
-    const integer       particles_per_round, 
+    const size          particles_per_round, 
     const std::string&  load_balancer      , 
     const std::string&  integrator         , 
     const scalar        step_size          , 
@@ -93,12 +125,12 @@ public:
   particle_advector& operator=(const particle_advector&  that) = delete ;
   particle_advector& operator=(      particle_advector&& temp) = default;
 
-  output      advect                  (const vector_fields& vector_fields, particles& active_particles);
+  output      advect                  (const vector_field_map& vector_fields, particle_vector& particles);
   
 protected:
   friend pipeline; // For benchmarking of individual steps.
 
-  bool        check_completion        (const state& state);
+  bool        check_completion        (const state& state) const;
   void        load_balance_distribute (      state& state);
   round_state compute_round_state     (const state& state);
   void        allocate_integral_curves(                    const round_state& round_state, output& output);
@@ -109,7 +141,7 @@ protected:
   void        prune_integral_curves   (                                                    output& output);
 
   domain_partitioner*        partitioner_         {};
-  integer                    particles_per_round_ {};
+  size                       particles_per_round_ {};
   load_balancer              load_balancer_       {};
   variant_vector3_integrator integrator_          {};
   scalar                     step_size_           {};

@@ -33,17 +33,17 @@ void                                                                         dom
   }));
 
   partitions_.clear();
-  partitions_[relative_direction::center] = setup_partition(cartesian_communicator_->rank());
+  partitions_[center] = setup_partition(cartesian_communicator_->rank());
 
   const auto shift_x = cartesian_communicator_->shifted_ranks(0, 1);
   const auto shift_y = cartesian_communicator_->shifted_ranks(1, 1);
   const auto shift_z = cartesian_communicator_->shifted_ranks(2, 1);
-  if (shift_x.first  != MPI_PROC_NULL) partitions_[relative_direction::negative_x] = setup_partition(shift_x.first );
-  if (shift_x.second != MPI_PROC_NULL) partitions_[relative_direction::positive_x] = setup_partition(shift_x.second);
-  if (shift_y.first  != MPI_PROC_NULL) partitions_[relative_direction::negative_y] = setup_partition(shift_y.first );
-  if (shift_y.second != MPI_PROC_NULL) partitions_[relative_direction::positive_y] = setup_partition(shift_y.second);
-  if (shift_z.first  != MPI_PROC_NULL) partitions_[relative_direction::negative_z] = setup_partition(shift_z.first );
-  if (shift_z.second != MPI_PROC_NULL) partitions_[relative_direction::positive_z] = setup_partition(shift_z.second);
+  if (shift_x.first  != MPI_PROC_NULL) partitions_[negative_x] = setup_partition(shift_x.first );
+  if (shift_x.second != MPI_PROC_NULL) partitions_[positive_x] = setup_partition(shift_x.second);
+  if (shift_y.first  != MPI_PROC_NULL) partitions_[negative_y] = setup_partition(shift_y.first );
+  if (shift_y.second != MPI_PROC_NULL) partitions_[positive_y] = setup_partition(shift_y.second);
+  if (shift_z.first  != MPI_PROC_NULL) partitions_[negative_z] = setup_partition(shift_z.first );
+  if (shift_z.second != MPI_PROC_NULL) partitions_[positive_z] = setup_partition(shift_z.second);
 }
 
 boost::mpi::communicator*                                                    domain_partitioner::communicator          ()
