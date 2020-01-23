@@ -12,54 +12,55 @@
 
 namespace dpa
 {
-particle_advector::particle_advector(domain_partitioner* partitioner, const integer particles_per_round, const std::string& load_balancer, const std::string& integrator, const scalar step_size, const bool gather_particles, const bool record)
+particle_advector::particle_advector(domain_partitioner* partitioner, const size particles_per_round, const std::string& load_balancer, const std::string& integrator, const scalar step_size, const bool gather_particles, const bool record)
 : partitioner_        (partitioner)
 , particles_per_round_(particles_per_round)
 , step_size_          (step_size)
 , gather_particles_   (gather_particles)
 , record_             (record)
 {
-  if      (load_balancer == "diffuse_constant")                       load_balancer_ = load_balancer::diffuse_constant;
-  else if (load_balancer == "diffuse_lesser_average")                 load_balancer_ = load_balancer::diffuse_lesser_average;
+  if      (load_balancer == "diffuse_constant"                      ) load_balancer_ = load_balancer::diffuse_constant;
+  else if (load_balancer == "diffuse_lesser_average"                ) load_balancer_ = load_balancer::diffuse_lesser_average;
   else if (load_balancer == "diffuse_greater_limited_lesser_average") load_balancer_ = load_balancer::diffuse_greater_limited_lesser_average;
   else                                                                load_balancer_ = load_balancer::none;
 
-  if      (integrator == "euler"                       ) integrator_ = euler_integrator                       <vector3>();
-  else if (integrator == "modified_midpoint"           ) integrator_ = modified_midpoint_integrator           <vector3>();
-  else if (integrator == "runge_kutta_4"               ) integrator_ = runge_kutta_4_integrator               <vector3>();
-  else if (integrator == "runge_kutta_cash_karp_54"    ) integrator_ = runge_kutta_cash_karp_54_integrator    <vector3>();
-  else if (integrator == "runge_kutta_dormand_prince_5") integrator_ = runge_kutta_dormand_prince_5_integrator<vector3>();
-  else if (integrator == "runge_kutta_fehlberg_78"     ) integrator_ = runge_kutta_fehlberg_78_integrator     <vector3>();
-  else if (integrator == "adams_bashforth_2"           ) integrator_ = adams_bashforth_2_integrator           <vector3>();
-  else if (integrator == "adams_bashforth_moulton_2"   ) integrator_ = adams_bashforth_moulton_2_integrator   <vector3>();
+  if      (integrator    == "euler"                                 ) integrator_    = euler_integrator                       <vector3>();
+  else if (integrator    == "modified_midpoint"                     ) integrator_    = modified_midpoint_integrator           <vector3>();
+  else if (integrator    == "runge_kutta_4"                         ) integrator_    = runge_kutta_4_integrator               <vector3>();
+  else if (integrator    == "runge_kutta_cash_karp_54"              ) integrator_    = runge_kutta_cash_karp_54_integrator    <vector3>();
+  else if (integrator    == "runge_kutta_dormand_prince_5"          ) integrator_    = runge_kutta_dormand_prince_5_integrator<vector3>();
+  else if (integrator    == "runge_kutta_fehlberg_78"               ) integrator_    = runge_kutta_fehlberg_78_integrator     <vector3>();
+  else if (integrator    == "adams_bashforth_2"                     ) integrator_    = adams_bashforth_2_integrator           <vector3>();
+  else if (integrator    == "adams_bashforth_moulton_2"             ) integrator_    = adams_bashforth_moulton_2_integrator   <vector3>();
 }
 
-particle_advector::output     particle_advector::advect                  (const vector_fields& vector_fields,       particles& particles)
+particle_advector::output      particle_advector::advect                  (const vector_field_map& vector_fields, particle_vector& particles)
 {
+  state  state(vector_fields, particles, partitioner_->partitions());
   output output;
-  while (!check_completion(particles))
+  while (!check_completion(state))
   {
-                      load_balance_distribute (               particles                                                      );
-    auto round_info = compute_round_info      (               particles                                                      );
-                      allocate_integral_curves(                                            output.integral_curves, round_info);
-                      advect                  (vector_fields, particles, output.particles, output.integral_curves, round_info);
-                      load_balance_collect    (vector_fields,            output.particles,                         round_info);
-                      out_of_bounds_distribute(               particles,                                           round_info);
+                       load_balance_distribute (state);
+    auto round_state = compute_round_state     (state);
+                       allocate_integral_curves(       round_state, output);
+                       advect                  (state, round_state, output);
+                       load_balance_collect    (state, round_state, output);
+                       out_of_bounds_distribute(state, round_state);
   }
-  gather_particles     (output.particles      );
-  prune_integral_curves(output.integral_curves);
+  gather_particles     (output);
+  prune_integral_curves(output);
   return output;
 }
 
-bool                          particle_advector::check_completion        (                                    const particles& active_particles) 
+bool                           particle_advector::check_completion        (const state& state) const
 { 
   std::vector<std::size_t> particle_sizes;
-  boost::mpi::gather   (*partitioner_->cartesian_communicator(), particles.size(), particle_sizes, 0);
+  boost::mpi::gather   (*partitioner_->cartesian_communicator(), state.active_particles.size(), particle_sizes, 0);
   auto   complete = std::all_of(particle_sizes.begin(), particle_sizes.end(), std::bind(std::equal_to<std::size_t>(), std::placeholders::_1, 0));
   boost::mpi::broadcast(*partitioner_->cartesian_communicator(), complete, 0);
   return complete;
 }
-void                          particle_advector::load_balance_distribute (                                          particles& active_particles)
+void                           particle_advector::load_balance_distribute (      state& state)
 {
   if (load_balancer_ == load_balancer::none) return;
 
@@ -243,15 +244,19 @@ void                          particle_advector::load_balance_distribute (      
 #endif
   }
 }
-particle_advector::round_info particle_advector::compute_round_info      (                                    const particles& active_particles) 
+particle_advector::round_state particle_advector::compute_round_state     (const state& state) 
 {
-  round_info round_info;
-  round_info.particle_count = std::min(std::size_t(particles_per_round_), particles.size());
+  round_state round_info;
+  round_info.particle_count = std::min(std::size_t(particles_per_round_), state.active_particles.size());
 
   if (record_)
   {
     // Two more vertices per curve; one for initial position, one for termination vertex.
-    round_info.curve_stride = std::max_element(particles.end() - round_info.particle_count, particles.end(), [ ] (const particle<vector3, integer>& lhs, const particle<vector3, integer>& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; })->remaining_iterations + 2;
+    round_info.curve_stride = std::max_element(
+      state.active_particles.end() - round_info.particle_count, 
+      state.active_particles.end(), 
+      [ ] (const particle<vector3, integer>& lhs, const particle<vector3, integer>& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; })
+      ->remaining_iterations + 2;
     round_info.vertex_count = round_info.particle_count * round_info.curve_stride;
   }
 
@@ -263,13 +268,13 @@ particle_advector::round_info particle_advector::compute_round_info      (      
 
   return round_info;
 }
-void                          particle_advector::allocate_integral_curves(                                                                                                                                                                                                             integral_curves_3d& integral_curves, const round_info& round_info) 
+void                           particle_advector::allocate_integral_curves(                    const round_state& round_state, output& output) 
 {
   if (!record_) return;
 
-  integral_curves.emplace_back().resize(round_info.vertex_count, invalid_value<vector3>());
+  output.integral_curves.emplace_back().resize(round_state.vertex_count, invalid_value<vector3>());
 }
-void                          particle_advector::advect                  (const vector_fields& vector_fields,       particles& active_particles, std::vector<particle<vector3, integer>>& inactive_particles, integral_curves_3d& integral_curves,       round_info& round_info)
+void                           particle_advector::advect                  (      state& state,       round_state& round_state, output& output)
 {
   tbb::mutex mutex;
   tbb::parallel_for(std::size_t(0), round_info.particle_count, std::size_t(1), [&] (const std::size_t particle_index)
@@ -288,15 +293,15 @@ void                          particle_advector::advect                  (const 
     {
       if (!vector_field.contains(particle.position))
       {
-        if (particle.relative_direction == relative_direction::center) // if non-load balanced particle:
+        if (particle.relative_direction == center) // if non-load balanced particle:
         {
           std::optional<relative_direction> direction;
-          if      (particle.position[0] < lower_bounds[0]) direction = relative_direction::negative_x;
-          else if (particle.position[0] > upper_bounds[0]) direction = relative_direction::positive_x;
-          else if (particle.position[1] < lower_bounds[1]) direction = relative_direction::negative_y;
-          else if (particle.position[1] > upper_bounds[1]) direction = relative_direction::positive_y;
-          else if (particle.position[2] < lower_bounds[2]) direction = relative_direction::negative_z;
-          else if (particle.position[2] > upper_bounds[2]) direction = relative_direction::positive_z;
+          if      (particle.position[0] < lower_bounds[0]) direction = negative_x;
+          else if (particle.position[0] > upper_bounds[0]) direction = positive_x;
+          else if (particle.position[1] < lower_bounds[1]) direction = negative_y;
+          else if (particle.position[1] > upper_bounds[1]) direction = positive_y;
+          else if (particle.position[2] < lower_bounds[2]) direction = negative_z;
+          else if (particle.position[2] > upper_bounds[2]) direction = positive_z;
 
           round_info::particle_map::accessor accessor;
           if (direction && round_info.out_of_bounds_particles.find(accessor, direction.value()))
@@ -358,7 +363,7 @@ void                          particle_advector::advect                  (const 
   });
   particles.resize(particles.size() - round_info.particle_count);
 }
-void                          particle_advector::load_balance_collect    (const vector_fields& vector_fields,                                    std::vector<particle<vector3, integer>>& inactive_particles,                                            round_info& round_info) 
+void                           particle_advector::load_balance_collect    (      state& state,       round_state& round_state, output& output) 
 {
   if (load_balancer_ == load_balancer::none) return;
 
@@ -379,7 +384,7 @@ void                          particle_advector::load_balance_collect    (const 
       std::vector<particle<vector3, integer>> temporary_particles;
       communicator->recv(partitions.at(neighbor.first).rank, 0, temporary_particles);
       
-      auto& vector_field = vector_fields.at(relative_direction::center);
+      auto& vector_field = vector_fields.at(center);
       auto  lower_bounds = vector_field.offset;
       auto  upper_bounds = vector_field.offset + vector_field.size;
 
@@ -388,15 +393,15 @@ void                          particle_advector::load_balance_collect    (const 
       {
         auto& particle = temporary_particles[particle_index];
 
-        particle.relative_direction = relative_direction::center;
+        particle.relative_direction = center;
 
         std::optional<relative_direction> direction;
-        if      (particle.position[0] < lower_bounds[0]) direction = relative_direction::negative_x;
-        else if (particle.position[0] > upper_bounds[0]) direction = relative_direction::positive_x;
-        else if (particle.position[1] < lower_bounds[1]) direction = relative_direction::negative_y;
-        else if (particle.position[1] > upper_bounds[1]) direction = relative_direction::positive_y;
-        else if (particle.position[2] < lower_bounds[2]) direction = relative_direction::negative_z;
-        else if (particle.position[2] > upper_bounds[2]) direction = relative_direction::positive_z;
+        if      (particle.position[0] < lower_bounds[0]) direction = negative_x;
+        else if (particle.position[0] > upper_bounds[0]) direction = positive_x;
+        else if (particle.position[1] < lower_bounds[1]) direction = negative_y;
+        else if (particle.position[1] > upper_bounds[1]) direction = positive_y;
+        else if (particle.position[2] < lower_bounds[2]) direction = negative_z;
+        else if (particle.position[2] > upper_bounds[2]) direction = positive_z;
 
         round_info::particle_map::accessor accessor;
         if (direction && round_info.out_of_bounds_particles.find(accessor, direction.value()))
@@ -414,7 +419,7 @@ void                          particle_advector::load_balance_collect    (const 
 #endif
   }
 }                                                                                                                                                                                                                         
-void                          particle_advector::out_of_bounds_distribute(                                                                                            particles& active_particles,                                                                                                   const round_info& round_info) 
+void                           particle_advector::out_of_bounds_distribute(      state& state, const round_state& round_state)
 {
 #ifdef DPA_USE_NEIGHBORHOOD_COLLECTIVES
   // TODO: Neighborhood collectives.
@@ -437,37 +442,37 @@ void                          particle_advector::out_of_bounds_distribute(      
     request.wait();
 #endif
 }
-void                          particle_advector::gather_particles        (                                                                                            particles& active_particles)
+void                           particle_advector::gather_particles        (                                                    output& output)
 {
   if (!gather_particles_) return;
 
-#ifdef DPA_FTLE_SUPPORT
+//#ifdef DPA_FTLE_SUPPORT
   std::vector<std::vector<particle<vector3, integer>>> sent    (partitioner_->cartesian_communicator()->size());
   std::vector<std::vector<particle<vector3, integer>>> received(partitioner_->cartesian_communicator()->size());
 
   tbb::mutex mutex;
-  tbb::parallel_for(std::size_t(0), particles.size(), std::size_t(1), [&](const std::size_t index)
+  tbb::parallel_for(std::size_t(0), output.inactive_particles.size(), std::size_t(1), [&](const std::size_t index)
   {
     tbb::mutex::scoped_lock lock(mutex);
-    sent[particles[index].original_rank].push_back(particles[index]);
+    sent[output.inactive_particles.at[index].original_rank].push_back(output.inactive_particles[index]);
   });
 
   boost::mpi::all_to_all(*partitioner_->cartesian_communicator(), sent, received);
 
-  particles.clear();
-  for (auto& particles_vector : received)
-    particles.insert(particles.end(), particles_vector.begin(), particles_vector.end());
-#else
+  output.inactive_particles.clear();
+  for (auto& particles : received)
+    output.inactive_particles.grow_by(particles.begin(), particles.end());
+//#else
   std::cout << "Particles are not gathered since original ranks are unavailable. Declare DPA_FTLE_SUPPORT and rebuild." << std::endl;
-#endif
+//#endif
 }
-void                          particle_advector::prune_integral_curves   (                                                                                                                                                                                                                   integral_curves_3d& integral_curves) 
+void                           particle_advector::prune_integral_curves   (                                                    output& output) 
 {
   if (!record_) return;
   
-  tbb::parallel_for(std::size_t(0), integral_curves.size(), std::size_t(1), [&](const std::size_t index)
+  tbb::parallel_for(std::size_t(0), output.integral_curves.size(), std::size_t(1), [&] (const std::size_t index)
   {
-    auto& curves = integral_curves[index];
+    auto& curves = output.integral_curves[index];
     curves.erase(std::remove(curves.begin(), curves.end(), invalid_value<vector3>()), curves.end());
   });
 }
