@@ -74,7 +74,7 @@ public:
   };
   struct output
   {
-    concurrent_particle_vector inactive_particles                    {}; // Implicitly the inactive particles vector.
+    concurrent_particle_vector inactive_particles                    {};
     integral_curves_3d         integral_curves                       {};
   };
 
