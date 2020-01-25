@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include <dpa/types/relative_direction.hpp>
+
 namespace dpa
 {
 // Ducks [] on the position_type.
@@ -13,16 +15,28 @@ struct particle
   template<class archive_type>
   void serialize(archive_type& archive, const std::uint32_t version)
   {
-    archive & position            [0];
-    archive & position            [1];
-    archive & position            [2];
-    archive & remaining_iterations   ;
-    archive & original_process_index ;
+    archive & position[0];
+    archive & position[1];
+    archive & position[2];
+    archive & remaining_iterations;
+    archive & relative_direction;
+
+#ifdef DPA_FTLE_SUPPORT
+    archive & original_rank;
+    archive & original_position[0];
+    archive & original_position[1];
+    archive & original_position[2];
+#endif
   }
 
-  position_type position               = {};
-  integer_type  remaining_iterations   = 0 ;
-  integer_type  original_process_index = 0 ;
+  position_type           position             = {};
+  integer_type            remaining_iterations = 0 ;
+  dpa::relative_direction relative_direction   = dpa::relative_direction::center;
+
+#ifdef DPA_FTLE_SUPPORT
+  integer_type       original_rank        = 0 ;
+  position_type      original_position    = position;
+#endif
 };
 }
 

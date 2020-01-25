@@ -104,7 +104,7 @@ public:
   void                gather   ()
   {
     std::ostringstream stream;
-    for (auto& record : records) 
+    for (auto& record : session<type>::records)
       stream << rank_ << "," << record.to_string() << "\n";
     std::string  local_string = stream      .str ();
     std::int32_t local_size   = local_string.size();
@@ -129,7 +129,7 @@ public:
 
     std::ofstream stream(filepath);
     stream << "rank,name,";
-    for (auto i = 0; i < records[0].values.size(); ++i)
+    for (auto i = 0; i < session<type>::records[0].values.size(); ++i)
       stream << "iteration " << i << ",";
     stream << "mean,variance,standard deviation\n";
     stream << to_string();
@@ -165,7 +165,7 @@ public:
     const auto end   = std::chrono::high_resolution_clock::now();
 
     auto record = std::find_if(session_.records.begin(), session_.records.end(),
-      [&name] (const record<type>& record) { return record.name == name; });
+      [&name] (const dpa::record<type>& record) { return record.name == name; });
     if (record == session_.records.end())
     {
       session_.records.push_back({name, {std::vector<type>(iterations_)}});

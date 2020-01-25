@@ -1,6 +1,6 @@
 ##################################################    Project     ##################################################
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
-project               (dpa VERSION 1.0 LANGUAGES CXX)
+project               (dpa VERSION 1.0 LANGUAGES C CXX)
 list                  (APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set_property          (GLOBAL PROPERTY USE_FOLDERS ON)
 set                   (CMAKE_CXX_STANDARD 17)
@@ -10,6 +10,11 @@ set_max_warning_level ()
 
 ##################################################    Options     ##################################################
 option(BUILD_TESTS "Build tests." OFF)
+option(DPA_FTLE_SUPPORT "Build with FTLE support (i.e. particle gathering and grid remapping)." OFF)
+
+if   (DPA_FTLE_SUPPORT)
+list (APPEND PROJECT_COMPILE_DEFINITIONS -DDPA_FTLE_SUPPORT)
+endif()
 
 ##################################################    Sources     ##################################################
 file(GLOB_RECURSE PROJECT_HEADERS include/*.h include/*.hpp)
@@ -45,8 +50,8 @@ find_package  (HDF5 REQUIRED)
 import_library(HDF5_INCLUDE_DIRS HDF5_C_LIBRARIES)
 list          (APPEND PROJECT_COMPILE_DEFINITIONS -DH5_USE_BOOST -DH5_BUILT_AS_DYNAMIC_LIB)
 
-find_package  (HighFive REQUIRED)
-list          (APPEND PROJECT_LIBRARIES HighFive)
+find_package  (MKL REQUIRED)
+list          (APPEND PROJECT_LIBRARIES MKL::MKL)
 
 find_package  (MPI REQUIRED)
 import_library(MPI_C_INCLUDE_DIRS MPI_C_LIBRARIES)
@@ -55,8 +60,13 @@ find_package  (nlohmann_json 3.7.0 REQUIRED)
 list          (APPEND PROJECT_LIBRARIES nlohmann_json::nlohmann_json)
 
 find_package  (TBB REQUIRED)
-list          (APPEND PROJECT_LIBRARIES TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy)
+list          (APPEND PROJECT_LIBRARIES TBB::tbb TBB::tbbmalloc)
   
+if(UNIX)
+  find_package(Threads REQUIRED)
+  list        (APPEND PROJECT_LIBRARIES Threads::Threads)
+endif()
+
 # ADD LIBRARIES HERE. Vcpkg toolchain file will automatically locate them.
 # Examples:
 # - Header Only:

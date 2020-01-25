@@ -3,6 +3,7 @@
 
 #include <variant>
 
+#include <boost/numeric/odeint/external/eigen/eigen_algebra.hpp>
 #include <boost/numeric/odeint.hpp>
 
 #include <dpa/types/basic_types.hpp>

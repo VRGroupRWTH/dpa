@@ -1,6 +1,7 @@
 #ifndef DPA_STAGES_UNIFORM_SEED_GENERATOR_HPP
 #define DPA_STAGES_UNIFORM_SEED_GENERATOR_HPP
 
+#include <optional>
 #include <vector>
 
 #include <dpa/types/basic_types.hpp>
@@ -11,7 +12,13 @@ namespace dpa
 class uniform_seed_generator
 {
 public:
-  static std::vector<particle<vector3, integer>> generate(const vector3& offset, const vector3& size, const vector3& stride, integer iterations, integer process_index);
+  static std::vector<particle<vector3, integer>> generate       (vector3 offset, vector3 size, vector3  stride, integer iterations, integer process_index, std::optional<aabb3> aabb = std::nullopt);
+  static std::vector<particle<vector3, integer>> generate_random(vector3 offset, vector3 size, integer  count , integer iterations, integer process_index, std::optional<aabb3> aabb = std::nullopt);
+  static std::vector<particle<vector3, integer>> generate_random(vector3 offset, vector3 size, ivector2 range , integer iterations, integer process_index, std::optional<aabb3> aabb = std::nullopt);
+
+  // TODO: Seeds from radius, generated within the sphere enclosed by it.
+  // TODO: Seeds from vector of particles     (read in parallel, then distributed all to all, also from file of 1D vector3 array).
+  // TODO: Seeds from scalar mask of booleans (read in parallel, one particle per true voxel, also from file of 3D boolean array).
 };
 }
 
