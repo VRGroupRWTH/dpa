@@ -55,7 +55,7 @@ particle_advector::output      particle_advector::advect                  (const
 bool                           particle_advector::check_completion        (const state& state) const
 { 
   std::vector<std::size_t> particle_counts;
-  boost::mpi::gather   (*partitioner_->cartesian_communicator(), state.active_particles.size(), particle_counts, 0);
+  boost::mpi::gather   (*partitioner_->cartesian_communicator(), state.total_active_particle_count(), particle_counts, 0);
   auto   complete = std::all_of(particle_counts.begin(), particle_counts.end(), std::bind(std::equal_to<std::size_t>(), std::placeholders::_1, 0));
   boost::mpi::broadcast(*partitioner_->cartesian_communicator(), complete, 0);
   return complete;
@@ -73,7 +73,7 @@ void                           particle_advector::load_balance_distribute (     
     auto& partitions   = partitioner_->partitions            ();
 
     // Send/receive particle counts to/from neighbors.
-    const load_balancing_info                                   local_load_balancing_info { std::size_t(communicator->rank()), std::min(std::size_t(particles_per_round_), particles.size()) };
+    const load_balancing_info                                   local_load_balancing_info { std::size_t(communicator->rank()), state.total_active_particle_count() };
     std::unordered_map<relative_direction, load_balancing_info> neighbor_load_balancing_info;
     {
       std::vector<boost::mpi::request> requests;
@@ -94,7 +94,7 @@ void                           particle_advector::load_balance_distribute (     
       // Alpha is  1 - 2 / (dimensions + 1) -> 0.5 for 3D.
       for (auto& neighbor : neighbor_load_balancing_info)
         if (neighbor.second.particle_count < local_load_balancing_info.particle_count)
-          outgoing_counts[neighbor.first] = std::min(particles.size(), std::size_t((local_load_balancing_info.particle_count - neighbor.second.particle_count) * double(0.5)));
+          outgoing_counts[neighbor.first] = std::min(state.active_particles.size(), std::size_t((local_load_balancing_info.particle_count - neighbor.second.particle_count) * double(0.5)));
     }
     else if (load_balancer_ == load_balancer::diffuse_lesser_average)
     {
@@ -130,7 +130,7 @@ void                           particle_advector::load_balance_distribute (     
 
       for (auto& neighbor : neighbor_load_balancing_info)
         if (contributors[neighbor.first])
-          outgoing_counts[neighbor.first] = std::min(particles.size(), mean - neighbor_load_balancing_info[neighbor.first].particle_count);
+          outgoing_counts[neighbor.first] = std::min(state.active_particles.size(), mean - neighbor_load_balancing_info[neighbor.first].particle_count);
     }
     else if (load_balancer_ == load_balancer::diffuse_greater_limited_lesser_average)
     {
@@ -212,7 +212,7 @@ void                           particle_advector::load_balance_distribute (     
 
       for (auto& neighbor : neighbor_load_balancing_info)
         if (lesser_contributors[neighbor.first])
-          outgoing_counts[neighbor.first] = std::min(particles.size(), std::min(incoming_quotas[neighbor.first].quota, lesser_mean - neighbor_load_balancing_info[neighbor.first].particle_count));
+          outgoing_counts[neighbor.first] = std::min(state.active_particles.size(), std::min(incoming_quotas[neighbor.first].quota, lesser_mean - neighbor_load_balancing_info[neighbor.first].particle_count));
     }
 
     // Send/receive outgoing_counts particles to/from neighbors.
@@ -220,22 +220,26 @@ void                           particle_advector::load_balance_distribute (     
       std::vector<boost::mpi::request> requests;
       for (auto& neighbor : neighbor_load_balancing_info)
       {
-        std::vector<particle<vector3, integer>> outgoing_particles(particles.end() - outgoing_counts[neighbor.first], particles.end());
-        particles.erase(particles.end() - outgoing_counts[neighbor.first], particles.end());
+        std::vector<particle<vector3, integer>> outgoing_particles(state.active_particles.end() - outgoing_counts[neighbor.first], state.active_particles.end());
+        state.active_particles.resize(state.active_particles.size() - outgoing_counts[neighbor.first]);
 
         tbb::parallel_for(std::size_t(0), outgoing_particles.size(), std::size_t(1), [&] (const std::size_t index)
         {
-          outgoing_particles[index].relative_direction = relative_direction(-neighbor.first);
+          outgoing_particles[index].relative_direction = relative_direction(-neighbor.first); // This process is e.g. the north neighbor of its south neighbor.
         });
 
         requests.push_back(communicator->isend(neighbor.second.rank, 0, outgoing_particles));
+
         std::cout << "Send " << outgoing_particles.size() << " particles to neighbor " << neighbor.first << "\n";
       } 
       for (auto& neighbor : neighbor_load_balancing_info)
       {
         std::vector<particle<vector3, integer>> incoming_particles;
         communicator->recv(neighbor.second.rank, 0, incoming_particles);
-        particles.insert(particles.end(), incoming_particles.begin(), incoming_particles.end());
+
+        auto& target_particles = state.load_balanced_active_particles[neighbor.first];
+        target_particles.insert(target_particles.end(), incoming_particles.begin(), incoming_particles.end());
+        
         std::cout << "Recv " << incoming_particles.size() << " particles from neighbor " << neighbor.first << "\n";
       }   
       for (auto& request : requests)
@@ -270,7 +274,6 @@ void                           particle_advector::allocate_integral_curves(     
 }
 void                           particle_advector::advect                  (      state& state,       round_state& round_state, output& output)
 {
-  tbb::mutex mutex;
   tbb::parallel_for(std::size_t(0), round_state.particle_count, std::size_t(1), [&] (const std::size_t particle_index)
   {
     auto& particle        = state.active_particles[state.active_particles.size() - round_state.particle_count + particle_index];
