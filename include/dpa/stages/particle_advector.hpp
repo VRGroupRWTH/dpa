@@ -27,6 +27,7 @@ public:
   using particle_map               = std::unordered_map    <relative_direction, particle_vector>;
   using concurrent_particle_vector = tbb::concurrent_vector<particle_3d>;
   using concurrent_particle_map    = std::unordered_map    <relative_direction, concurrent_particle_vector>;
+  using round_vector               = std::vector           <std::pair<particle_vector&, std::size_t>>;
 
   struct state
   {
@@ -77,6 +78,7 @@ public:
     std::size_t                particle_count                        = 0;
     std::size_t                curve_stride                          = 0;
     std::size_t                vertex_count                          = 0;
+    round_vector               round_particles                       {};
     concurrent_particle_map    out_of_bounds_particles               {};
     concurrent_particle_map    load_balanced_out_of_bounds_particles {};
   };

@@ -80,9 +80,11 @@ void                           particle_advector::load_balance_distribute (     
     {
       std::vector<boost::mpi::request> requests;
       for (auto& partition : partitions)
-        requests.push_back(communicator->isend(partition.second.rank, 0, local_load_balancing_info));
+        if (partition.first != center)
+          requests.push_back(communicator->isend(partition.second.rank, 0, local_load_balancing_info));
       for (auto& partition : partitions)
-        communicator->recv(partition.second.rank, 0, neighbor_load_balancing_info[partition.first]);
+        if (partition.first != center)
+          communicator->recv(partition.second.rank, 0, neighbor_load_balancing_info[partition.first]);
       for (auto& request : requests)
         request.wait();
     }
@@ -174,10 +176,10 @@ void                           particle_advector::load_balance_distribute (     
       // Send/receive quotas to/from neighbors.
       {
         std::vector<boost::mpi::request> requests;
-        for (auto& partition : partitions)
-          requests.push_back(communicator->isend(partition.second.rank, 0, outgoing_quotas[partition.first]));
-        for (auto& partition : partitions)
-          communicator->recv(partition.second.rank, 0, incoming_quotas[partition.first]);
+        for (auto& neighbor : neighbor_load_balancing_info)
+          requests.push_back(communicator->isend(neighbor.second.rank, 0, outgoing_quotas[neighbor.first]));
+        for (auto& neighbor : neighbor_load_balancing_info)
+          communicator->recv(neighbor.second.rank, 0, incoming_quotas[neighbor.first]);
         for (auto& request : requests)
           request.wait();
       }
@@ -253,16 +255,39 @@ void                           particle_advector::load_balance_distribute (     
 particle_advector::round_state particle_advector::compute_round_state     (const state& state) 
 {
   round_state round_state(partitioner_->partitions());
-  round_state.particle_count = std::min(std::size_t(particles_per_round_), state.active_particles.size()); // Chose among state.load_balanced_active_particles.
+  round_state.particle_count = std::min(particles_per_round_, state.total_active_particle_count()); 
+  
+  auto particle_count     = std::size_t(0);
+  auto maximum_iterations = std::size_t(0);
+  auto compare            = [ ] (const particle_3d& lhs, const particle_3d& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; };
+  for (auto& neighbor : state.load_balanced_active_particles)
+  {
+    if (particle_count < round_state.particle_count)
+    {
+      const auto difference = std::min(round_state.particle_count - particle_count, neighbor.second.size());
+      round_state.round_particles.emplace_back(state.active_particles, difference);
+      particle_count += difference;
+      
+      const auto begin   = neighbor.second.end() - difference;
+      const auto end     = neighbor.second.end();
+      maximum_iterations = std::max(maximum_iterations, std::max_element(begin, end, compare)->remaining_iterations);
+    }
+    else
+      break;
+  }
+  if (particle_count < round_state.particle_count)
+  {
+    const auto difference = round_state.particle_count - particle_count;
+    round_state.round_particles.emplace_back(state.active_particles, difference);
+    
+    const auto begin = state.active_particles.end() - difference;
+    const auto end   = state.active_particles.end();
+    maximum_iterations = std::max(maximum_iterations, std::max_element(begin, end, compare)->remaining_iterations);
+  }
 
   if (record_)
   {
-    // Two more vertices per curve; one for initial position, one for termination vertex.
-    round_state.curve_stride = std::max_element(
-      state.active_particles.end() - round_state.particle_count, 
-      state.active_particles.end(), 
-      [ ] (const particle_3d& lhs, const particle_3d& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; })
-      ->remaining_iterations + 2;
+    round_state.curve_stride = maximum_iterations + 2; // Two more vertices per curve; one for initial position, one for termination vertex.
     round_state.vertex_count = round_state.particle_count * round_state.curve_stride;
   }
 
@@ -276,83 +301,88 @@ void                           particle_advector::allocate_integral_curves(     
 }
 void                           particle_advector::advect                  (      state& state,       round_state& round_state, output& output)
 {
-  tbb::parallel_for(std::size_t(0), round_state.particle_count, std::size_t(1), [&] (const std::size_t particle_index)
+  auto particle_index_offset = size(0);
+  for (auto& pair : round_state.round_particles)
   {
-    auto& particle        = state.active_particles[state.active_particles.size() - round_state.particle_count + particle_index];
-    // TODO: Choose among state.load_balanced_active_particles before state.active_particles.
-    
-    auto& vector_field    = state.vector_fields.at(particle.relative_direction);
-    auto  bounds          = aabb3(vector_field.offset, vector_field.offset + vector_field.size);
-    auto  integrator      = integrator_;
-    auto  iteration_index = std::size_t(0);
+    auto& particle_vector = pair.first ;
+    auto  particle_count  = pair.second;
 
-    if (record_)
-      output.integral_curves.back()[particle_index * round_state.curve_stride] = particle.position;
-
-    for ( ; particle.remaining_iterations > 0; ++iteration_index, --particle.remaining_iterations)
+    tbb::parallel_for(std::size_t(0), particle_count, std::size_t(1), [&] (const std::size_t particle_index)
     {
-      if (!vector_field.contains(particle.position))
-      {
-        if (particle.relative_direction == center) // if non-load balanced particle, send to neighbor process.
-        {
-          std::optional<relative_direction> direction;
-          if      (particle.position[0] < bounds.min()[0]) direction = negative_x;
-          else if (particle.position[0] > bounds.max()[0]) direction = positive_x;
-          else if (particle.position[1] < bounds.min()[1]) direction = negative_y;
-          else if (particle.position[1] > bounds.max()[1]) direction = positive_y;
-          else if (particle.position[2] < bounds.min()[2]) direction = negative_z;
-          else if (particle.position[2] > bounds.max()[2]) direction = positive_z;
-          
-          if (direction && round_state.out_of_bounds_particles.find(direction.value()) != round_state.out_of_bounds_particles.end())
-            round_state.out_of_bounds_particles.at(direction.value()).push_back(particle);
-          else
-            output.inactive_particles.push_back(particle);
-        }
-        else // if load balanced particle, send to original process which will then send it to neighbor process.
-        {
-          round_state.load_balanced_out_of_bounds_particles.at(particle.relative_direction).push_back(particle);
-        }
-        break;
-      }
+      auto& particle        = particle_vector[particle_vector.size() - particle_count + particle_index];
+      auto& vector_field    = state.vector_fields.at(particle.relative_direction);
+      auto  bounds          = aabb3(vector_field.offset, vector_field.offset + vector_field.size);
+      auto  integrator      = integrator_;
+      auto  iteration_index = std::size_t(0);
 
-      const auto vector = vector_field.interpolate(particle.position);
-      if (vector.isZero())
-      {
-        output.inactive_particles.push_back(particle);
-        break;
-      }
-
-      const auto system = [&] (const vector3& x, vector3& dxdt, const float t) { dxdt = vector; };
-      if      (std::holds_alternative<euler_integrator<vector3>>                       (integrator))
-        std::get<euler_integrator<vector3>>                       (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      else if (std::holds_alternative<modified_midpoint_integrator<vector3>>           (integrator))
-        std::get<modified_midpoint_integrator<vector3>>           (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      else if (std::holds_alternative<runge_kutta_4_integrator<vector3>>               (integrator))
-        std::get<runge_kutta_4_integrator<vector3>>               (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      else if (std::holds_alternative<runge_kutta_cash_karp_54_integrator<vector3>>    (integrator))
-        std::get<runge_kutta_cash_karp_54_integrator<vector3>>    (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      else if (std::holds_alternative<runge_kutta_dormand_prince_5_integrator<vector3>>(integrator))
-        std::get<runge_kutta_dormand_prince_5_integrator<vector3>>(integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      else if (std::holds_alternative<runge_kutta_fehlberg_78_integrator<vector3>>     (integrator))
-        std::get<runge_kutta_fehlberg_78_integrator<vector3>>     (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      else if (std::holds_alternative<adams_bashforth_2_integrator<vector3>>           (integrator))
-        std::get<adams_bashforth_2_integrator<vector3>>           (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      else if (std::holds_alternative<adams_bashforth_moulton_2_integrator<vector3>>   (integrator))
-        std::get<adams_bashforth_moulton_2_integrator<vector3>>   (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
-      
       if (record_)
-        output.integral_curves.back()[particle_index * round_state.curve_stride + iteration_index + 1] = particle.position;
-    }
+        output.integral_curves.back()[(particle_index_offset + particle_index) * round_state.curve_stride] = particle.position;
 
-    if (record_)
-      output.integral_curves.back()[particle_index * round_state.curve_stride + iteration_index + 1] = terminal_value<vector3>();
+      for ( ; particle.remaining_iterations > 0; ++iteration_index, --particle.remaining_iterations)
+      {
+        if (!vector_field.contains(particle.position))
+        {
+          if (particle.relative_direction == center) // if non-load balanced particle, send to neighbor process.
+          {
+            std::optional<relative_direction> direction;
+            if      (particle.position[0] < bounds.min()[0]) direction = negative_x;
+            else if (particle.position[0] > bounds.max()[0]) direction = positive_x;
+            else if (particle.position[1] < bounds.min()[1]) direction = negative_y;
+            else if (particle.position[1] > bounds.max()[1]) direction = positive_y;
+            else if (particle.position[2] < bounds.min()[2]) direction = negative_z;
+            else if (particle.position[2] > bounds.max()[2]) direction = positive_z;
+            
+            if (direction && round_state.out_of_bounds_particles.find(direction.value()) != round_state.out_of_bounds_particles.end())
+              round_state.out_of_bounds_particles.at(direction.value()).push_back(particle);
+            else
+              output.inactive_particles.push_back(particle);
+          }
+          else // if load balanced particle, send to original process which will then send it to neighbor process.
+          {
+            round_state.load_balanced_out_of_bounds_particles.at(particle.relative_direction).push_back(particle);
+          }
+          break;
+        }
 
-    if (particle.remaining_iterations == 0)
-      output.inactive_particles.push_back(particle);
-  });
+        const auto vector = vector_field.interpolate(particle.position);
+        if (vector.isZero())
+        {
+          output.inactive_particles.push_back(particle);
+          break;
+        }
 
-  // TODO: Reduce from associated vector.
-  state.active_particles.resize(state.active_particles.size() - round_state.particle_count);
+        const auto system = [&] (const vector3& x, vector3& dxdt, const float t) { dxdt = vector; };
+        if      (std::holds_alternative<euler_integrator<vector3>>                       (integrator))
+          std::get<euler_integrator<vector3>>                       (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        else if (std::holds_alternative<modified_midpoint_integrator<vector3>>           (integrator))
+          std::get<modified_midpoint_integrator<vector3>>           (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        else if (std::holds_alternative<runge_kutta_4_integrator<vector3>>               (integrator))
+          std::get<runge_kutta_4_integrator<vector3>>               (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        else if (std::holds_alternative<runge_kutta_cash_karp_54_integrator<vector3>>    (integrator))
+          std::get<runge_kutta_cash_karp_54_integrator<vector3>>    (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        else if (std::holds_alternative<runge_kutta_dormand_prince_5_integrator<vector3>>(integrator))
+          std::get<runge_kutta_dormand_prince_5_integrator<vector3>>(integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        else if (std::holds_alternative<runge_kutta_fehlberg_78_integrator<vector3>>     (integrator))
+          std::get<runge_kutta_fehlberg_78_integrator<vector3>>     (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        else if (std::holds_alternative<adams_bashforth_2_integrator<vector3>>           (integrator))
+          std::get<adams_bashforth_2_integrator<vector3>>           (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        else if (std::holds_alternative<adams_bashforth_moulton_2_integrator<vector3>>   (integrator))
+          std::get<adams_bashforth_moulton_2_integrator<vector3>>   (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
+        
+        if (record_)
+          output.integral_curves.back()[(particle_index_offset + particle_index) * round_state.curve_stride + iteration_index + 1] = particle.position;
+      }
+
+      if (record_)
+        output.integral_curves.back()[(particle_index_offset + particle_index) * round_state.curve_stride + iteration_index + 1] = terminal_value<vector3>();
+
+      if (particle.remaining_iterations == 0)
+        output.inactive_particles.push_back(particle);
+    });
+
+    particle_vector.resize(particle_vector.size() - particle_count);
+    particle_index_offset += particle_count;
+  }
 }
 void                           particle_advector::load_balance_collect    (      state& state,       round_state& round_state, output& output) 
 {
