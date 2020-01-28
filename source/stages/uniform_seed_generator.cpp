@@ -33,9 +33,9 @@ std::vector<particle_3d> uniform_seed_generator::generate       (vector3 offset,
     const vector3  position    = offset.array() + stride.array() * multi_index.cast<scalar>().array();
 
 #ifdef DPA_FTLE_SUPPORT
-    particles[index]           = {position, iterations, center, process_index};
+    particles[index]           = particle_3d(position, iterations, center, process_index);
 #else
-    particles[index]           = {position, iterations, center};
+    particles[index]           = particle_3d(position, iterations, center);
 #endif
   });
   return particles;
@@ -67,9 +67,9 @@ std::vector<particle_3d> uniform_seed_generator::generate_random(vector3 offset,
     multivariate_uniform_distribution<vector3> distribution    (distribution_range);
 
 #ifdef DPA_FTLE_SUPPORT
-    particles[index] = {distribution(mersenne_twister), iterations, center, process_index};
+    particles[index] = particle_3d(distribution(mersenne_twister), iterations, center, process_index);
 #else
-    particles[index] = {distribution(mersenne_twister), iterations, center};
+    particles[index] = particle_3d(distribution(mersenne_twister), iterations, center);
 #endif
   });
   return particles;

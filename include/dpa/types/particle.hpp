@@ -11,6 +11,38 @@ namespace dpa
 template <typename position_type, typename size_type>
 struct particle
 {
+  particle() = default;
+  particle(
+    const position_type&     position            , 
+    const size_type          remaining_iterations, 
+    const relative_direction relative_direction  )
+  : position            (position            )
+  , remaining_iterations(remaining_iterations)
+  , relative_direction  (relative_direction  )
+  {
+    
+  }
+#ifdef DPA_FTLE_SUPPORT
+  particle(
+    const position_type&     position            , 
+    const size_type          remaining_iterations, 
+    const relative_direction relative_direction  ,
+    const integer            original_rank       )
+  : position            (position            )
+  , remaining_iterations(remaining_iterations)
+  , relative_direction  (relative_direction  )
+  , original_rank       (original_rank       )
+  , original_position   (position            )
+  {
+    
+  }
+#endif
+  particle           (const particle&  that) = default;
+  particle           (      particle&& temp) = default;
+ ~particle           ()                      = default;
+  particle& operator=(const particle&  that) = default;
+  particle& operator=(      particle&& temp) = default;
+
   // Function for boost::serialization which is used by boost::mpi.
   template<class archive_type>
   void serialize(archive_type& archive, const std::uint32_t version)
@@ -34,8 +66,8 @@ struct particle
   dpa::relative_direction relative_direction   = center;
 
 #ifdef DPA_FTLE_SUPPORT
-  integer_type            original_rank        = 0 ;
-  position_type           original_position    = position;
+  integer                 original_rank        = 0 ;
+  position_type           original_position    = {};
 #endif
 };
 

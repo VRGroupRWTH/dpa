@@ -7,6 +7,8 @@
 #include <boost/mpi.hpp>
 #include <tbb/tbb.h>
 
+#include <dpa/utility/serialization/concurrent_vector.hpp>
+
 #undef min
 #undef max
 
@@ -220,7 +222,7 @@ void                           particle_advector::load_balance_distribute (     
       std::vector<boost::mpi::request> requests;
       for (auto& neighbor : neighbor_load_balancing_info)
       {
-        std::vector<particle<vector3, integer>> outgoing_particles(state.active_particles.end() - outgoing_counts[neighbor.first], state.active_particles.end());
+        std::vector<particle_3d> outgoing_particles(state.active_particles.end() - outgoing_counts[neighbor.first], state.active_particles.end());
         state.active_particles.resize(state.active_particles.size() - outgoing_counts[neighbor.first]);
 
         tbb::parallel_for(std::size_t(0), outgoing_particles.size(), std::size_t(1), [&] (const std::size_t index)
@@ -234,7 +236,7 @@ void                           particle_advector::load_balance_distribute (     
       } 
       for (auto& neighbor : neighbor_load_balancing_info)
       {
-        std::vector<particle<vector3, integer>> incoming_particles;
+        std::vector<particle_3d> incoming_particles;
         communicator->recv(neighbor.second.rank, 0, incoming_particles);
 
         auto& target_particles = state.load_balanced_active_particles[neighbor.first];
@@ -251,7 +253,7 @@ void                           particle_advector::load_balance_distribute (     
 particle_advector::round_state particle_advector::compute_round_state     (const state& state) 
 {
   round_state round_state(partitioner_->partitions());
-  round_state.particle_count = std::min(std::size_t(particles_per_round_), state.active_particles.size());
+  round_state.particle_count = std::min(std::size_t(particles_per_round_), state.active_particles.size()); // Chose among state.load_balanced_active_particles.
 
   if (record_)
   {
@@ -259,7 +261,7 @@ particle_advector::round_state particle_advector::compute_round_state     (const
     round_state.curve_stride = std::max_element(
       state.active_particles.end() - round_state.particle_count, 
       state.active_particles.end(), 
-      [ ] (const particle<vector3, integer>& lhs, const particle<vector3, integer>& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; })
+      [ ] (const particle_3d& lhs, const particle_3d& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; })
       ->remaining_iterations + 2;
     round_state.vertex_count = round_state.particle_count * round_state.curve_stride;
   }
@@ -282,7 +284,7 @@ void                           particle_advector::advect                  (     
     auto& vector_field    = state.vector_fields.at(particle.relative_direction);
     auto  bounds          = aabb3(vector_field.offset, vector_field.offset + vector_field.size);
     auto  integrator      = integrator_;
-    auto  iteration_index = 0;
+    auto  iteration_index = std::size_t(0);
 
     if (record_)
       output.integral_curves.back()[particle_index * round_state.curve_stride] = particle.position;
@@ -291,7 +293,7 @@ void                           particle_advector::advect                  (     
     {
       if (!vector_field.contains(particle.position))
       {
-        if (particle.relative_direction == center) // if non-load balanced particle:
+        if (particle.relative_direction == center) // if non-load balanced particle, send to neighbor process.
         {
           std::optional<relative_direction> direction;
           if      (particle.position[0] < bounds.min()[0]) direction = negative_x;
@@ -306,11 +308,9 @@ void                           particle_advector::advect                  (     
           else
             output.inactive_particles.push_back(particle);
         }
-        else // if load balanced particle:
+        else // if load balanced particle, send to original process which will then send it to neighbor process.
         {
-          auto neighbor_iterator = round_state.out_of_bounds_particles.find(particle.relative_direction);
-          if (round_state.load_balanced_out_of_bounds_particles.find(accessor, particle.relative_direction))
-            accessor->second.push_back(particle);
+          round_state.load_balanced_out_of_bounds_particles.at(particle.relative_direction).push_back(particle);
         }
         break;
       }
@@ -350,6 +350,8 @@ void                           particle_advector::advect                  (     
     if (particle.remaining_iterations == 0)
       output.inactive_particles.push_back(particle);
   });
+
+  // TODO: Reduce from associated vector.
   state.active_particles.resize(state.active_particles.size() - round_state.particle_count);
 }
 void                           particle_advector::load_balance_collect    (      state& state,       round_state& round_state, output& output) 
@@ -434,7 +436,7 @@ void                           particle_advector::gather_particles        (     
 
   tbb::parallel_for(std::size_t(0), output.inactive_particles.size(), std::size_t(1), [&] (const std::size_t index)
   {
-    sent[output.inactive_particles.at[index].original_rank].push_back(output.inactive_particles[index]);
+    sent[output.inactive_particles[index].original_rank].push_back(output.inactive_particles[index]);
   });
 
   boost::mpi::all_to_all(*partitioner_->cartesian_communicator(), sent, received);

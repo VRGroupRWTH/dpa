@@ -43,19 +43,14 @@ public:
     state& operator=(const state&  that) = default;
     state& operator=(      state&& temp) = default;
 
-    std::size_t      total_active_particle_count() const
+    std::size_t total_active_particle_count() const
     {
       auto count = active_particles.size();
       for (auto& entry : load_balanced_active_particles)
         count += entry.second.size();
       return count;
     }
-    particle_vector& next_target                ()
-    {
-      // If load_balanced_active_particles has non-empty vectors, send them first.
-      // If not, active_particles.
-    }
-
+    
     const vector_field_map&    vector_fields;
     particle_vector&           active_particles;
     particle_map               load_balanced_active_particles {};
