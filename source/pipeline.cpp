@@ -57,7 +57,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     recorder.record("3.seed_generation"    , [&] ()
     {
       auto offset        = vector_fields[center].spacing.array() * partitioner.partitions().at(center).offset.cast<scalar>().array();
-      auto size          = vector_fields[center].spacing.array() * partitioner.block_size()                                      .cast<scalar>().array();
+      auto size          = vector_fields[center].spacing.array() * partitioner.block_size()                  .cast<scalar>().array();
       auto iterations    = arguments.seed_generation_iterations;
       auto process_index = partitioner.cartesian_communicator()->rank();
       auto boundaries    = arguments.seed_generation_boundaries ? arguments.seed_generation_boundaries : std::nullopt;

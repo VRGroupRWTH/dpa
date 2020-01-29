@@ -19,7 +19,13 @@ namespace serialization
   template<class Archive, class T, class A>
   void load     (Archive& ar,       tbb::concurrent_vector<T, A>& v, const unsigned int version)
   {
-    stl::collection_load_impl(ar, v, collection_size_type(v.size()), item_version_type(version));
+    collection_size_type count        = 0;
+    item_version_type    item_version = 0;
+    ar >> BOOST_SERIALIZATION_NVP(count);
+    if (boost::archive::library_version_type(3) < ar.get_library_version())
+      ar >> BOOST_SERIALIZATION_NVP(item_version);
+
+    stl::collection_load_impl(ar, v, count, item_version);
   }
   template<class Archive, class T, class A>
   void serialize(Archive& ar,       tbb::concurrent_vector<T, A>& v, const unsigned int version)
