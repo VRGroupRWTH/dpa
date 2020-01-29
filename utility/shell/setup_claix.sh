@@ -12,7 +12,7 @@ module load python/3.6.0
 cd $ROOT_DIRECTORY
 
 if [ ! -d "packages" ]; then 
-  mkdir packages; 
+  mkdir packages
 fi
 cd packages
 
@@ -20,7 +20,7 @@ if [ ! -d "git" ]; then
   mkdir git
   cd git
 
-  git clone --branch v2.24.0 https://github.com/git/git.git; 
+  git clone --branch v2.24.0 https://github.com/git/git.git 
   cd git
   make configure
   ./configure --prefix=$ROOT_DIRECTORY/packages/git
