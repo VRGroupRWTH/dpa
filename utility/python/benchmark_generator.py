@@ -14,6 +14,8 @@ script_template = """#!/bin/bash
 #SBATCH --sockets-per-node=4
 #SBATCH --cores-per-socket=12
 #SBATCH --account=rwth0432
+module swap intelmpi openmpi/4.0.2
+module load gcc/9 cmake/3.13.2
 $MPIEXEC $FLAGS_MPI_BATCH $2 $1.json
 """
 
