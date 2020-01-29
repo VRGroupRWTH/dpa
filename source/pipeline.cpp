@@ -14,7 +14,7 @@ namespace dpa
 {
 std::int32_t pipeline::run(std::int32_t argc, char** argv)
 {
-  boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::multiple);
+  boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::serialized);
   std::cout << "Started pipeline on " << environment.processor_name() << "\n";
 
   auto arguments         = argument_parser::parse(argv[1]);

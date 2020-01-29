@@ -224,7 +224,7 @@ void                           particle_advector::load_balance_distribute (     
       std::vector<boost::mpi::request> requests;
       for (auto& neighbor : neighbor_load_balancing_info)
       {
-        std::vector<particle_3d> outgoing_particles(state.active_particles.end() - outgoing_counts[neighbor.first], state.active_particles.end());
+        particle_vector outgoing_particles(state.active_particles.end() - outgoing_counts[neighbor.first], state.active_particles.end());
         state.active_particles.resize(state.active_particles.size() - outgoing_counts[neighbor.first]);
 
         tbb::parallel_for(std::size_t(0), outgoing_particles.size(), std::size_t(1), [&] (const std::size_t index)
@@ -238,7 +238,7 @@ void                           particle_advector::load_balance_distribute (     
       } 
       for (auto& neighbor : neighbor_load_balancing_info)
       {
-        std::vector<particle_3d> incoming_particles;
+        particle_vector incoming_particles;
         communicator->recv(neighbor.second.rank, 0, incoming_particles);
 
         auto& target_particles = state.load_balanced_active_particles[neighbor.first];
@@ -261,6 +261,7 @@ particle_advector::round_state particle_advector::compute_round_state     (     
   auto maximum_iterations = std::size_t(0);
   auto compare            = [ ] (const particle_3d& lhs, const particle_3d& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; };
 
+  // Prioritize load balanced particles.
   for (auto& neighbor : state.load_balanced_active_particles)
   {
     if (particle_count < round_state.particle_count)
@@ -279,6 +280,7 @@ particle_advector::round_state particle_advector::compute_round_state     (     
     else
       break;
   }
+  // Fill rest from local particles.
   if (particle_count < round_state.particle_count)
   {
     const auto difference = std::min(round_state.particle_count - particle_count, state.active_particles.size());
@@ -409,15 +411,15 @@ void                           particle_advector::load_balance_collect    (     
       requests.push_back(communicator->isend(partitions.at(neighbor.first).rank, 0, neighbor.second));
     for (auto& neighbor : round_state.load_balanced_out_of_bounds_particles)
     {
-      particle_vector temporary_particles;
-      communicator->recv(partitions.at(neighbor.first).rank, 0, temporary_particles);
+      concurrent_particle_vector particles;
+      communicator->recv(partitions.at(neighbor.first).rank, 0, particles);
       
       auto& vector_field = state.vector_fields.at(center);
       auto  bounds       = aabb3(vector_field.offset, vector_field.offset + vector_field.size);
 
-      tbb::parallel_for(std::size_t(0), temporary_particles.size(), std::size_t(1), [&] (const std::size_t particle_index)
+      tbb::parallel_for(std::size_t(0), particles.size(), std::size_t(1), [&] (const std::size_t particle_index)
       {
-        auto& particle = temporary_particles[particle_index];
+        auto& particle = particles[particle_index];
         particle.relative_direction = center;
 
         std::optional<relative_direction> direction;
@@ -454,7 +456,7 @@ void                           particle_advector::out_of_bounds_distribute(     
     requests.push_back(communicator->isend(partitions.at(neighbor.first).rank, 0, neighbor.second));
   for (auto& neighbor : round_state.out_of_bounds_particles)
   {
-    particle_vector particles;
+    concurrent_particle_vector particles;
     communicator->recv(partitions.at(neighbor.first).rank, 0, particles);
     state.active_particles.insert(state.active_particles.end(), particles.begin(), particles.end());
   }
