@@ -27,7 +27,7 @@ public:
   using particle_map               = std::unordered_map    <relative_direction, particle_vector>;
   using concurrent_particle_vector = tbb::concurrent_vector<particle_3d>;
   using concurrent_particle_map    = std::unordered_map    <relative_direction, concurrent_particle_vector>;
-  using round_vector               = std::vector           <std::pair<particle_vector&, std::size_t>>;
+  using round_vector               = std::vector           <std::pair<std::reference_wrapper<particle_vector>, std::size_t>>;
 
   struct state
   {

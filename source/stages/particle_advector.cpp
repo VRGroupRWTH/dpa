@@ -260,6 +260,7 @@ particle_advector::round_state particle_advector::compute_round_state     (     
   auto particle_count     = std::size_t(0);
   auto maximum_iterations = std::size_t(0);
   auto compare            = [ ] (const particle_3d& lhs, const particle_3d& rhs) { return lhs.remaining_iterations < rhs.remaining_iterations; };
+
   for (auto& neighbor : state.load_balanced_active_particles)
   {
     if (particle_count < round_state.particle_count)
@@ -309,7 +310,7 @@ void                           particle_advector::advect                  (     
 
     tbb::parallel_for(std::size_t(0), particle_count, std::size_t(1), [&] (const std::size_t particle_index)
     {
-      auto& particle        = particle_vector[particle_vector.size() - particle_count + particle_index];
+      auto& particle        = particle_vector.get()[particle_vector.get().size() - particle_count + particle_index];
       auto& vector_field    = state.vector_fields.at(particle.relative_direction);
       auto  bounds          = aabb3(vector_field.offset, vector_field.offset + vector_field.size);
       auto  integrator      = integrator_;
@@ -380,7 +381,7 @@ void                           particle_advector::advect                  (     
         output.inactive_particles.push_back(particle);
     });
 
-    particle_vector.resize(particle_vector.size() - particle_count);
+    particle_vector.get().resize(particle_vector.get().size() - particle_count);
     particle_index_offset += particle_count;
   }
 }
