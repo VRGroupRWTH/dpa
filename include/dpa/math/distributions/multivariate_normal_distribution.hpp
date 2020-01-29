@@ -169,8 +169,8 @@ public:
   }
 
 protected:
-  template<typename engine>
-  result_type evaluate         (engine& engine, const param_type& parameters)
+  template<typename engine_type>
+  result_type evaluate         (engine_type& engine, const param_type& parameters)
   {
     result_type value;
     auto& _distributions = distributions();

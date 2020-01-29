@@ -6,6 +6,7 @@
 
 #include <dpa/math/indexing.hpp>
 #include <dpa/math/distributions/multivariate_uniform_distribution.hpp>
+#include <dpa/utility/eigen.hpp>
 
 #undef min
 #undef max

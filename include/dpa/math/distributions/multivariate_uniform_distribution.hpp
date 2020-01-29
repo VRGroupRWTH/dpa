@@ -132,13 +132,13 @@ public:
     parameters_ = parameters;
   }
   
-  template<typename engine>
-  result_type operator()       (engine& engine) const
+  template<typename engine_type>
+  result_type operator()       (engine_type& engine) const
   {
     return evaluate(engine, parameters_);
   }
-  template<typename engine>
-  result_type operator()       (engine& engine, const param_type& parameters) const
+  template<typename engine_type>
+  result_type operator()       (engine_type& engine, const param_type& parameters) const
   {
     return evaluate(engine, parameters);
   } 
@@ -170,8 +170,8 @@ public:
   }
 
 protected:
-  template<typename engine>
-  result_type evaluate         (engine& engine, const param_type& parameters) const
+  template<typename engine_type>
+  result_type evaluate         (engine_type& engine, const param_type& parameters) const
   {
     result_type value;
     auto& _distributions = distributions();
