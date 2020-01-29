@@ -98,7 +98,7 @@ public:
       archive & particle_count;
     }
 
-    std::size_t rank;
+    integer     rank;
     std::size_t particle_count;
   };
   struct quota_info

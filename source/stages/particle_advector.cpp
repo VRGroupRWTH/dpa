@@ -75,7 +75,7 @@ void                           particle_advector::load_balance_distribute (     
     auto& partitions   = partitioner_->partitions            ();
 
     // Send/receive particle counts to/from neighbors.
-    const load_balancing_info                                   local_load_balancing_info { std::size_t(communicator->rank()), state.total_active_particle_count() };
+    const load_balancing_info                                   local_load_balancing_info { communicator->rank(), state.total_active_particle_count() };
     std::unordered_map<relative_direction, load_balancing_info> neighbor_load_balancing_info;
     {
       std::vector<boost::mpi::request> requests;
@@ -265,7 +265,7 @@ particle_advector::round_state particle_advector::compute_round_state     (const
     if (particle_count < round_state.particle_count)
     {
       const auto difference = std::min(round_state.particle_count - particle_count, neighbor.second.size());
-      round_state.round_particles.emplace_back(state.active_particles, difference);
+      round_state.round_particles.emplace_back(neighbor.second, difference);
       particle_count += difference;
       
       const auto begin   = neighbor.second.end() - difference;
