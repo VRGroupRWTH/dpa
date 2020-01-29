@@ -1,4 +1,5 @@
 import json
+from math import log, floor
 from pathlib import Path
 
 # $1: configuration name 
@@ -21,12 +22,10 @@ $MPIEXEC $FLAGS_MPI_BATCH $2 $1.json
 """
 
 def human_format(number):
-  number = float('{:.3g}'.format(number))
-  magnitude = 0
-  while abs(number) >= 1000:
-    magnitude += 1
-  number /= 1000.0
-  return '{}{}'.format('{:f}'.format(number).rstrip('0').rstrip('.'), ['', 'k', 'm', 'b', 't'][magnitude])
+  units = ['', 'k', 'm', 'g', 't', 'p']
+  k = 1000.0
+  magnitude = int(floor(log(number, k)))
+  return '%.2f%s' % (number / k**magnitude, units[magnitude])
 
 def generate(
   nodes                  ,
