@@ -48,7 +48,7 @@ def generate(
 
   script = (script_template.
     replace("$1", name).
-    replace("$2", "/hpcwork/ad784563/source/dpa/build/dpa").
+    replace("$2", "/hpcwork/rwth0432/source/dpa/build/dpa").
     replace("$3", str(nodes)))
   with open("../configs/" + name + ".sh", 'w') as file:
     file.write(script)
@@ -89,7 +89,7 @@ def combine(
 
 combine(
   [32, 64, 128, 256],
-  ["/hpcwork/ad784563/data/oregon/astro.h5", "/hpcwork/ad784563/data/oregon/fishtank.h5", "/hpcwork/ad784563/data/oregon/fusion.h5"],
+  ["/hpcwork/rwth0432/data/oregon/astro.h5", "/hpcwork/rwth0432/data/oregon/fishtank.h5", "/hpcwork/rwth0432/data/oregon/fusion.h5"],
   [1.0, 2.0, 4.0, 8.0],
   ["1000", "10000"],
   [{"minimum": [0.4, 0.4, 0.4], "maximum": [0.6, 0.6, 0.6]}],
