@@ -46,8 +46,8 @@ def generate(
   
   name = (Path(input_dataset_filepath).resolve().stem + 
     "_n_"   + str(nodes)  + 
-    "_s_"   + str(stride[0]) + "," +
-            + str(stride[1]) + "," +
+    "_s_"   + str(stride[0]) + ","
+            + str(stride[1]) + ","
             + str(stride[2]) +
     "_i_"   + str(human_format(int(iterations)))  + 
     "_b_"   + str(boundaries["minimum"][0]) + ","
