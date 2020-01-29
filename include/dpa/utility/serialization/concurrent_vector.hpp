@@ -25,6 +25,7 @@ namespace serialization
     if (boost::archive::library_version_type(3) < ar.get_library_version())
       ar >> BOOST_SERIALIZATION_NVP(item_version);
 
+    v.reserve(count);
     stl::collection_load_impl(ar, v, count, item_version);
   }
   template<class Archive, class T, class A>
