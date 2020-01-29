@@ -142,7 +142,7 @@ protected:
 
   bool        check_completion        (const state& state) const;
   void        load_balance_distribute (      state& state);
-  round_state compute_round_state     (const state& state);
+  round_state compute_round_state     (      state& state);
   void        allocate_integral_curves(                    const round_state& round_state, output& output);
   void        advect                  (      state& state,       round_state& round_state, output& output);
   void        load_balance_collect    (      state& state,       round_state& round_state, output& output);

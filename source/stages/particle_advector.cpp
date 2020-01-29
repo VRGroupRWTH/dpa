@@ -252,7 +252,7 @@ void                           particle_advector::load_balance_distribute (     
 #endif
   }
 }
-particle_advector::round_state particle_advector::compute_round_state     (const state& state) 
+particle_advector::round_state particle_advector::compute_round_state     (      state& state) 
 {
   round_state round_state(partitioner_->partitions());
   round_state.particle_count = std::min(particles_per_round_, state.total_active_particle_count()); 
@@ -277,7 +277,7 @@ particle_advector::round_state particle_advector::compute_round_state     (const
   }
   if (particle_count < round_state.particle_count)
   {
-    const auto difference = round_state.particle_count - particle_count;
+    const auto difference = std::min(round_state.particle_count - particle_count, state.active_particles.size());
     round_state.round_particles.emplace_back(state.active_particles, difference);
     
     const auto begin = state.active_particles.end() - difference;
