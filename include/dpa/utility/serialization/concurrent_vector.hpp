@@ -19,8 +19,8 @@ namespace serialization
   template<class Archive, class T, class A>
   void load     (Archive& ar,       tbb::concurrent_vector<T, A>& v, const unsigned int version)
   {
-    collection_size_type count        = 0;
-    item_version_type    item_version = 0;
+    collection_size_type count       (0);
+    item_version_type    item_version(0);
     ar >> BOOST_SERIALIZATION_NVP(count);
     if (boost::archive::library_version_type(3) < ar.get_library_version())
       ar >> BOOST_SERIALIZATION_NVP(item_version);
