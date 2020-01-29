@@ -6,6 +6,7 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/mpi.hpp>
+#include <hdf5.h>
 #include <tbb/tbb.h>
 
 #include <dpa/utility/xdmf.hpp>
@@ -19,16 +20,14 @@ integral_curve_saver::integral_curve_saver (domain_partitioner* partitioner, con
 : partitioner_(partitioner)
 , filepath_   (std::filesystem::path(filepath).replace_extension(".rank_" + std::to_string(partitioner_->cartesian_communicator()->rank()) + ".h5").string())
 {
-  file_ = H5Fcreate(filepath_.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-}
-integral_curve_saver::~integral_curve_saver()
-{
-  H5Fclose(file_);
+
 }
 
 void integral_curve_saver::save_integral_curves(const integral_curves_3d& integral_curves, bool use_64_bit_indices)
 {
-  std::vector<std::string> xdmfs;
+  std::vector<std::string> xdmf_bodies;
+
+  auto file = H5Fcreate(filepath_.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   for (auto curve_index = 0; curve_index < integral_curves.size(); ++curve_index)
   //tbb::parallel_for(std::size_t(0), integral_curves.size(), std::size_t(1), [&] (const std::size_t curve_index)
@@ -87,9 +86,9 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     const auto vertices_space       = H5Screate_simple(1, &vertex_element_count, nullptr);
     const auto colors_space         = H5Screate_simple(1, &color_element_count , nullptr);
     const auto indices_space        = H5Screate_simple(1, &index_count         , nullptr);
-    const auto vertices_dataset     = H5Dcreate2(file_, vertices_name.c_str(), H5T_NATIVE_FLOAT                                          , vertices_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    const auto colors_dataset       = H5Dcreate2(file_, colors_name  .c_str(), H5T_NATIVE_UINT8                                          , colors_space  , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    const auto indices_dataset      = H5Dcreate2(file_, indices_name .c_str(), use_64_bit_indices ? H5T_NATIVE_UINT64 : H5T_NATIVE_UINT32, indices_space , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    const auto vertices_dataset     = H5Dcreate2(file, vertices_name.c_str(), H5T_NATIVE_FLOAT                                          , vertices_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    const auto colors_dataset       = H5Dcreate2(file, colors_name  .c_str(), H5T_NATIVE_UINT8                                          , colors_space  , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    const auto indices_dataset      = H5Dcreate2(file, indices_name .c_str(), use_64_bit_indices ? H5T_NATIVE_UINT64 : H5T_NATIVE_UINT32, indices_space , H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     H5Dwrite(vertices_dataset, H5T_NATIVE_FLOAT                                          , vertices_space, vertices_space, H5P_DEFAULT, vertices.data()->data());
     H5Dwrite(colors_dataset  , H5T_NATIVE_UINT8                                          , colors_space  , colors_space  , H5P_DEFAULT, colors  .data()->data());
@@ -102,7 +101,7 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     H5Dclose(colors_dataset  );
     H5Dclose(indices_dataset );
     
-    auto& xdmf = xdmfs.emplace_back(xdmf_body);
+    auto& xdmf = xdmf_bodies.emplace_back(xdmf_body);
     boost::replace_all(xdmf, "$GRID_NAME"            , "grid_" + std::to_string(curve_index));
     boost::replace_all(xdmf, "$POLYLINE_COUNT"       , std::to_string(index_count / 2));
     boost::replace_all(xdmf, "$FILEPATH"             , std::filesystem::path(filepath_).filename().string());
@@ -114,8 +113,10 @@ void integral_curve_saver::save_integral_curves(const integral_curves_3d& integr
     boost::replace_all(xdmf, "$VERTEX_ARRAY_SIZE"    , std::to_string(vertex_element_count));
   //});
   }
-  
+
+  H5Fclose(file);
+
   std::ofstream stream(filepath_ + ".xdmf");
-  stream << xdmf_header << std::accumulate(xdmfs.begin(), xdmfs.end(), std::string("")) << xdmf_footer;
+  stream << xdmf_header << std::accumulate(xdmf_bodies.begin(), xdmf_bodies.end(), std::string("")) << xdmf_footer;
 }
 }

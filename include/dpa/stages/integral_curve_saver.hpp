@@ -3,8 +3,6 @@
 
 #include <string>
 
-#include <hdf5.h>
-
 #include <dpa/stages/domain_partitioner.hpp>
 #include <dpa/types/integral_curves.hpp>
 
@@ -16,7 +14,7 @@ public:
   explicit integral_curve_saver  (domain_partitioner* partitioner, const std::string& filepath);
   integral_curve_saver           (const integral_curve_saver&  that) = delete ;
   integral_curve_saver           (      integral_curve_saver&& temp) = default;
- ~integral_curve_saver           ();
+ ~integral_curve_saver           ()                                  = default;
   integral_curve_saver& operator=(const integral_curve_saver&  that) = delete ;
   integral_curve_saver& operator=(      integral_curve_saver&& temp) = default;
 
@@ -25,7 +23,6 @@ public:
 protected:
   domain_partitioner* partitioner_ = {};
   std::string         filepath_    = {};
-  hid_t               file_        = {};
 };
 }
 
