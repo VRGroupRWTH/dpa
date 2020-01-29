@@ -14,7 +14,7 @@ namespace dpa
 {
 std::int32_t pipeline::run(std::int32_t argc, char** argv)
 {
-  boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::serialized);
+  boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::multiple);
   std::cout << "Started pipeline on " << environment.processor_name() << "\n";
 
   auto arguments         = argument_parser::parse(argv[1]);
@@ -43,6 +43,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     {
       partitioner.set_domain_size(loader.load_dimensions(), svector3::Ones());
     });
+    partitioner.cartesian_communicator()->barrier();
     std::cout    << "2.data_loading\n";
     recorder.record("2.data_loading"       , [&] ()
     {
@@ -51,6 +52,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
         arguments.particle_advector_load_balancer == "diffuse_lesser_average"                 || 
         arguments.particle_advector_load_balancer == "diffuse_greater_limited_lesser_average" );
     });
+    partitioner.cartesian_communicator()->barrier();
     std::cout    << "3.seed_generation\n";
     recorder.record("3.seed_generation"    , [&] ()
     {
@@ -86,6 +88,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
           boundaries   );
     });
 
+    partitioner.cartesian_communicator()->barrier();
     particle_advector::state  state    = {vector_fields, particles, partitioner.partitions()};
     particle_advector::output output   = {};
     integer                   rounds   = 0;
@@ -130,17 +133,20 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       });  
       rounds++;
     }
+    partitioner.cartesian_communicator()->barrier();
     std::cout    << "4.8.gather_particles\n";
     recorder.record("4.8.gather_particles"     , [&] ()
     {
       advector.gather_particles     (output);
     });
+    partitioner.cartesian_communicator()->barrier();
     std::cout    << "4.9.prune_integral_curves\n";
     recorder.record("4.9.prune_integral_curves", [&] ()
     {
       advector.prune_integral_curves(output);
     });
 
+    partitioner.cartesian_communicator()->barrier();
     std::cout    << "5.data_saving\n";
     recorder.record("5.data_saving"            , [&] ()
     {
