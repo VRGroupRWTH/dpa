@@ -266,12 +266,15 @@ particle_advector::round_state particle_advector::compute_round_state     (     
     if (particle_count < round_state.particle_count)
     {
       const auto difference = std::min(round_state.particle_count - particle_count, neighbor.second.size());
-      round_state.round_particles.emplace_back(neighbor.second, difference);
-      particle_count += difference;
-      
-      const auto begin   = neighbor.second.end() - difference;
-      const auto end     = neighbor.second.end();
-      maximum_iterations = std::max(maximum_iterations, std::max_element(begin, end, compare)->remaining_iterations);
+      if (difference)
+      {
+        round_state.round_particles.emplace_back(neighbor.second, difference);
+        particle_count += difference;
+        
+        const auto begin   = neighbor.second.end() - difference;
+        const auto end     = neighbor.second.end();
+        maximum_iterations = std::max(maximum_iterations, std::max_element(begin, end, compare)->remaining_iterations); 
+      }
     }
     else
       break;
@@ -279,11 +282,14 @@ particle_advector::round_state particle_advector::compute_round_state     (     
   if (particle_count < round_state.particle_count)
   {
     const auto difference = std::min(round_state.particle_count - particle_count, state.active_particles.size());
-    round_state.round_particles.emplace_back(state.active_particles, difference);
-    
-    const auto begin = state.active_particles.end() - difference;
-    const auto end   = state.active_particles.end();
-    maximum_iterations = std::max(maximum_iterations, std::max_element(begin, end, compare)->remaining_iterations);
+    if (difference)
+    {
+      round_state.round_particles.emplace_back(state.active_particles, difference);
+      
+      const auto begin = state.active_particles.end() - difference;
+      const auto end   = state.active_particles.end();
+      maximum_iterations = std::max(maximum_iterations, std::max_element(begin, end, compare)->remaining_iterations); 
+    }
   }
 
   if (record_)
