@@ -13,11 +13,20 @@ script_template = """#!/bin/bash
 #SBATCH --ntasks-per-node=1
 #SBATCH --sockets-per-node=4
 #SBATCH --cores-per-socket=12
+#SBATCH --cpus-per-task=48
 #SBATCH --account=rwth0432
 module swap intelmpi openmpi/4.0.2
 module load gcc/9 cmake/3.13.2
 $MPIEXEC $FLAGS_MPI_BATCH $2 $1.json
 """
+
+def human_format(number):
+  number = float('{:.3g}'.format(number))
+  magnitude = 0
+  while abs(number) >= 1000:
+    magnitude += 1
+  number /= 1000.0
+  return '{}{}'.format('{:f}'.format(number).rstrip('0').rstrip('.'), ['', 'k', 'm', 'b', 't'][magnitude])
 
 def generate(
   nodes                  ,
@@ -36,17 +45,19 @@ def generate(
     load_balancer_shorthand = "gllma"
   
   name = (Path(input_dataset_filepath).resolve().stem + 
-    "_n"   + str(nodes)  + 
-    "_s"   + str(stride) + 
-    "_i"   + iterations  + 
-    "_b"   + str(boundaries["minimum"][0]) + ","
-           + str(boundaries["minimum"][1]) + ","
-           + str(boundaries["minimum"][2]) + ","
-           + str(boundaries["maximum"][0]) + ","
-           + str(boundaries["maximum"][1]) + ","
-           + str(boundaries["maximum"][2]) +
-    "_ppr" + particles_per_round + 
-    "_lb_" + load_balancer_shorthand)
+    "_n_"   + str(nodes)  + 
+    "_s_"   + str(stride[0]) + "," +
+            + str(stride[1]) + "," +
+            + str(stride[2]) +
+    "_i_"   + str(human_format(int(iterations)))  + 
+    "_b_"   + str(boundaries["minimum"][0]) + ","
+            + str(boundaries["minimum"][1]) + ","
+            + str(boundaries["minimum"][2]) + ","
+            + str(boundaries["maximum"][0]) + ","
+            + str(boundaries["maximum"][1]) + ","
+            + str(boundaries["maximum"][2]) +
+    "_ppr_" + str(human_format(int(particles_per_round))) + 
+    "_lb_"  + load_balancer_shorthand)
 
   script = (script_template.
     replace("$1", name).
@@ -59,7 +70,7 @@ def generate(
   configuration["input_dataset_filepath"               ] = input_dataset_filepath
   configuration["input_dataset_name"                   ] = "Data3"
   configuration["input_dataset_spacing_name"           ] = "spacing"
-  configuration["seed_generation_stride"               ] = [stride, stride, stride]
+  configuration["seed_generation_stride"               ] = [stride[0], stride[1], stride[2]]
   configuration["seed_generation_iterations"           ] = iterations
   configuration["seed_generation_boundaries"           ] = boundaries
   configuration["particle_advector_particles_per_round"] = particles_per_round
@@ -92,7 +103,7 @@ def combine(
 combine(
   [32, 64, 128, 256],
   ["/hpcwork/rwth0432/data/oregon/astro.h5", "/hpcwork/rwth0432/data/oregon/fishtank.h5", "/hpcwork/rwth0432/data/oregon/fusion.h5"],
-  [1.0, 2.0, 4.0, 8.0],
+  [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8]],
   ["1000", "10000"],
   [{"minimum": [0.4, 0.4, 0.4], "maximum": [0.6, 0.6, 0.6]}],
   ["10000000", "100000000"],
