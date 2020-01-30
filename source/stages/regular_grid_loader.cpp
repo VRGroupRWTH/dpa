@@ -73,7 +73,7 @@ regular_vector_field_3d                                         regular_grid_loa
   const auto space    = H5Dget_space    (dataset);
   const auto memspace = H5Screate_simple(4, native_size.data(), NULL);
   const auto property = H5Pcreate       (H5P_DATASET_XFER);
-  H5Pset_dxpl_mpio   (property, H5FD_MPIO_COLLECTIVE);
+  H5Pset_dxpl_mpio   (property, H5FD_MPIO_INDEPENDENT);
   H5Sselect_hyperslab(space, H5S_SELECT_SET, native_offset.data(), native_stride.data(), native_size.data(), nullptr);
   H5Dread            (dataset, H5T_NATIVE_FLOAT, memspace, space, property, vector_field.data.origin()->data());
   H5Pclose           (property);
