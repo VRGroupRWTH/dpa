@@ -1,5 +1,6 @@
 import json
 from math import log, floor
+import os
 from pathlib import Path
 
 # $1: configuration name 
@@ -62,7 +63,7 @@ def generate(
     replace("$1", name).
     replace("$2", "/hpcwork/rwth0432/source/dpa/build/dpa").
     replace("$3", str(nodes)))
-  with open("../configs/" + name + ".sh", 'w') as file:
+  with open("../config/" + name + ".sh", 'w') as file:
     file.write(script)
 
   configuration = {}
@@ -79,7 +80,7 @@ def generate(
   configuration["particle_advector_gather_particles"   ] = True
   configuration["particle_advector_record"             ] = True
   configuration["output_dataset_filepath"              ] = name + ".h5"
-  with open("../configs/" + name + ".json", 'w') as file:
+  with open("../config/" + name + ".json", 'w') as file:
     json.dump(configuration, file, indent=2)
 
 def combine(
@@ -99,6 +100,7 @@ def combine(
               for lb in load_balancer:
                 generate(n, d, s, i, b, ppr, lb)
 
+os.mkdir("../config")
 combine(
   [32, 64, 128, 256],
   ["/hpcwork/rwth0432/data/oregon/astro.h5", "/hpcwork/rwth0432/data/oregon/fishtank.h5", "/hpcwork/rwth0432/data/oregon/fusion.h5"],
