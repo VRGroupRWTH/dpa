@@ -153,7 +153,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       if (arguments.particle_advector_record)
         integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(output.integral_curves, (std::size_t(arguments.particle_advector_particles_per_round) * arguments.seed_generation_iterations) > std::numeric_limits<std::uint32_t>::max());
     });
-  }, 10);
+  }, 1);
   benchmark_session.gather();
   benchmark_session.to_csv(arguments.output_dataset_filepath + ".benchmark.csv");
   return 0;
