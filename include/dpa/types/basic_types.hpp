@@ -15,14 +15,18 @@ namespace dpa
 {
 using scalar   = float;
 using integer  = std::int32_t;
+using byte     = std::uint8_t;
 using size     = std::size_t;
-               
+
 using vector2  = Eigen::Matrix<scalar , 2, 1>;
 using vector3  = Eigen::Matrix<scalar , 3, 1>;
 using vector4  = Eigen::Matrix<scalar , 4, 1>;
 using ivector2 = Eigen::Matrix<integer, 2, 1>;
 using ivector3 = Eigen::Matrix<integer, 3, 1>;
 using ivector4 = Eigen::Matrix<integer, 4, 1>;
+using bvector2 = Eigen::Matrix<byte   , 2, 1>;
+using bvector3 = Eigen::Matrix<byte   , 3, 1>;
+using bvector4 = Eigen::Matrix<byte   , 4, 1>;
 using svector2 = Eigen::Matrix<size   , 2, 1>;
 using svector3 = Eigen::Matrix<size   , 3, 1>;
 using svector4 = Eigen::Matrix<size   , 4, 1>;
@@ -33,6 +37,9 @@ using matrix4  = Eigen::Matrix<scalar , 4, 4>;
 using imatrix2 = Eigen::Matrix<integer, 2, 2>;
 using imatrix3 = Eigen::Matrix<integer, 3, 3>;
 using imatrix4 = Eigen::Matrix<integer, 4, 4>;
+using bmatrix2 = Eigen::Matrix<byte   , 2, 2>;
+using bmatrix3 = Eigen::Matrix<byte   , 3, 3>;
+using bmatrix4 = Eigen::Matrix<byte   , 4, 4>;
 using smatrix2 = Eigen::Matrix<size   , 2, 2>;
 using smatrix3 = Eigen::Matrix<size   , 3, 3>;
 using smatrix4 = Eigen::Matrix<size   , 4, 4>;
@@ -88,6 +95,21 @@ struct vector_traits<integer, 4>
   using type = ivector4;
 };
 template <>
+struct vector_traits<byte   , 2>
+{
+  using type = bvector2;
+};
+template <>
+struct vector_traits<byte   , 3>
+{
+  using type = bvector3;
+};
+template <>
+struct vector_traits<byte   , 4>
+{
+  using type = bvector4;
+};
+template <>
 struct vector_traits<size   , 2>
 {
   using type = svector2;
@@ -137,6 +159,21 @@ template <>
 struct matrix_traits<integer, 4>
 {
   using type = imatrix4;
+};
+template <>
+struct matrix_traits<byte   , 2>
+{
+  using type = bmatrix2;
+};
+template <>
+struct matrix_traits<byte   , 3>
+{
+  using type = bmatrix3;
+};
+template <>
+struct matrix_traits<byte   , 4>
+{
+  using type = bmatrix4;
 };
 template <>
 struct matrix_traits<size   , 2>
