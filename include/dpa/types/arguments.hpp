@@ -24,6 +24,7 @@ struct arguments
   scalar                  particle_advector_step_size          ;
   bool                    particle_advector_gather_particles   ;
   bool                    particle_advector_record             ;
+  bool                    estimate_ftle                        ;
   std::string             output_dataset_filepath              ;
 };
 }

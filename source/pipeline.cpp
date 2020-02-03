@@ -4,11 +4,18 @@
 
 #include <dpa/benchmark/benchmark.hpp>
 #include <dpa/stages/argument_parser.hpp>
+#include <dpa/stages/color_generator.hpp>
+#include <dpa/stages/ftle_estimator.hpp>
+#include <dpa/stages/index_generator.hpp>
 #include <dpa/stages/regular_grid_loader.hpp>
+#include <dpa/stages/regular_grid_saver.hpp>
 #include <dpa/stages/domain_partitioner.hpp>
 #include <dpa/stages/integral_curve_saver.hpp>
 #include <dpa/stages/particle_advector.hpp>
 #include <dpa/stages/uniform_seed_generator.hpp>
+
+#undef min
+#undef max
 
 namespace dpa
 {
@@ -37,6 +44,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
 
     auto vector_fields = std::unordered_map<relative_direction, regular_vector_field_3d>();
     auto particles     = std::vector<particle_3d>();
+    auto ftle_field    = std::optional<regular_scalar_field_3d>();
 
     std::cout    << "1.domain_partitioning\n";
     recorder.record("1.domain_partitioning", [&] ()
@@ -56,11 +64,11 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     std::cout    << "3.seed_generation\n";
     recorder.record("3.seed_generation"    , [&] ()
     {
-      auto offset        = vector_fields[center].spacing.array() * partitioner.partitions().at(center).offset.cast<scalar>().array();
-      auto size          = vector_fields[center].spacing.array() * partitioner.block_size()                  .cast<scalar>().array();
-      auto iterations    = arguments.seed_generation_iterations;
-      auto process_index = partitioner.cartesian_communicator()->rank();
-      auto boundaries    = arguments.seed_generation_boundaries ? arguments.seed_generation_boundaries : std::nullopt;
+      const auto offset        = vector_fields[center].spacing.array() * partitioner.partitions().at(center).offset.cast<scalar>().array();
+      const auto size          = vector_fields[center].spacing.array() * partitioner.block_size()                  .cast<scalar>().array();
+      const auto iterations    = arguments.seed_generation_iterations;
+      const auto process_index = partitioner.cartesian_communicator()->rank();
+      const auto boundaries    = arguments.seed_generation_boundaries ? arguments.seed_generation_boundaries : std::nullopt;
 
       if      (arguments.seed_generation_stride)
         particles = uniform_seed_generator::generate(
@@ -145,13 +153,43 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     {
       advector.prune_integral_curves(output);
     });
-
+    
     partitioner.cartesian_communicator()->barrier();
-    std::cout    << "5.data_saving\n";
-    recorder.record("5.data_saving"            , [&] ()
+    std::cout    << "5.index_generation\n";
+    recorder.record("5.index_generation"       , [&] ()
     {
       if (arguments.particle_advector_record)
-        integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save_integral_curves(output.integral_curves, (std::size_t(arguments.particle_advector_particles_per_round) * arguments.seed_generation_iterations) > std::numeric_limits<std::uint32_t>::max());
+        index_generator::generate(output.integral_curves, arguments.particle_advector_particles_per_round * arguments.seed_generation_iterations > std::numeric_limits<std::uint32_t>::max());
+    });
+    partitioner.cartesian_communicator()->barrier();
+    std::cout    << "6.color_generation\n";
+    recorder.record("6.color_generation"       , [&] ()
+    {
+      if (arguments.particle_advector_record)
+        color_generator::generate_from_angular_velocities(output.integral_curves);
+    });
+
+    partitioner.cartesian_communicator()->barrier();
+    std::cout    << "7.save_integral_curves\n";
+    recorder.record("7.save_integral_curves"   , [&] ()
+    {
+      if (arguments.particle_advector_record)
+        integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save(output.integral_curves);
+    });
+
+    partitioner.cartesian_communicator()->barrier();
+    std::cout    << "8.estimate_ftle\n";
+    recorder.record("8.estimate_ftle"          , [&] ()
+    {
+      if (arguments.estimate_ftle)
+        ftle_field = ftle_estimator::estimate(vector_fields.at(center), arguments.seed_generation_stride.value(), output.inactive_particles); // Note: FTLE requires stride (i.e. regular seed generation).
+    });
+    partitioner.cartesian_communicator()->barrier();
+    std::cout    << "9.save_ftle_field\n";
+    recorder.record("9.save_ftle_field"        , [&] ()
+    {
+      if (arguments.estimate_ftle)
+        regular_grid_saver(&partitioner, arguments.output_dataset_filepath).save(ftle_field.value());
     });
   }, 1);
   benchmark_session.gather();
