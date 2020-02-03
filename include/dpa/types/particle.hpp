@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include <dpa/types/basic_types.hpp>
 #include <dpa/types/relative_direction.hpp>
 
 namespace dpa

@@ -1,6 +1,7 @@
 #ifndef DPA_TYPES_REGULAR_GRID_HPP
 #define DPA_TYPES_REGULAR_GRID_HPP
 
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <vector>
