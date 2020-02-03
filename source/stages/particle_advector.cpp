@@ -306,7 +306,7 @@ void                           particle_advector::allocate_integral_curves(     
 {
   if (!record_) return;
 
-  output.integral_curves.emplace_back().resize(round_state.vertex_count, invalid_value<vector3>());
+  output.integral_curves.emplace_back().vertices.resize(round_state.vertex_count, invalid_value<vector3>());
 }
 void                           particle_advector::advect                  (      state& state,       round_state& round_state, output& output)
 {
@@ -325,7 +325,7 @@ void                           particle_advector::advect                  (     
       auto  iteration_index = std::size_t(0);
 
       if (record_)
-        output.integral_curves.back()[(particle_index_offset + particle_index) * round_state.curve_stride] = particle.position;
+        output.integral_curves.back().vertices[(particle_index_offset + particle_index) * round_state.curve_stride] = particle.position;
 
       for ( ; particle.remaining_iterations > 0; ++iteration_index, --particle.remaining_iterations)
       {
@@ -379,11 +379,11 @@ void                           particle_advector::advect                  (     
           std::get<adams_bashforth_moulton_2_integrator<vector3>>   (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
         
         if (record_)
-          output.integral_curves.back()[(particle_index_offset + particle_index) * round_state.curve_stride + iteration_index + 1] = particle.position;
+          output.integral_curves.back().vertices[(particle_index_offset + particle_index) * round_state.curve_stride + iteration_index + 1] = particle.position;
       }
 
       if (record_)
-        output.integral_curves.back()[(particle_index_offset + particle_index) * round_state.curve_stride + iteration_index + 1] = terminal_value<vector3>();
+        output.integral_curves.back().vertices[(particle_index_offset + particle_index) * round_state.curve_stride + iteration_index + 1] = terminal_value<vector3>();
 
       if (particle.remaining_iterations == 0)
         output.inactive_particles.push_back(particle);
@@ -493,7 +493,7 @@ void                           particle_advector::prune_integral_curves   (     
   
   tbb::parallel_for(std::size_t(0), output.integral_curves.size(), std::size_t(1), [&] (const std::size_t index)
   {
-    auto& curves = output.integral_curves[index];
+    auto& curves = output.integral_curves[index].vertices;
     curves.erase(std::remove(curves.begin(), curves.end(), invalid_value<vector3>()), curves.end());
   });
 }

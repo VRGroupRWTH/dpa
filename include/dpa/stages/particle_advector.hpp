@@ -85,7 +85,7 @@ public:
   struct output
   {
     concurrent_particle_vector inactive_particles                    {};
-    integral_curves_3d         integral_curves                       {};
+    integral_curves            integral_curves                       {};
   };
 
   struct load_balancing_info

@@ -18,7 +18,7 @@ public:
   integral_curve_saver& operator=(const integral_curve_saver&  that) = delete ;
   integral_curve_saver& operator=(      integral_curve_saver&& temp) = default;
 
-  void save_integral_curves(const integral_curves_3d& integral_curves, bool use_64_bit_indices);
+  void save(const integral_curves& integral_curves);
 
 protected:
   domain_partitioner* partitioner_ = {};
