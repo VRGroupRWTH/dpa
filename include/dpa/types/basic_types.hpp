@@ -59,7 +59,7 @@ type terminal_value()
   return -2 * type::Ones();
 }
 
-template <typename type, std::size_t dimensions>
+template <typename _type, std::size_t _dimensions>
 struct vector_traits
 {
 
@@ -125,7 +125,7 @@ struct vector_traits<size   , 4>
   using type = svector4;
 };
 
-template <typename type, std::size_t dimensions>
+template <typename _type, std::size_t _dimensions>
 struct matrix_traits
 {
 
@@ -189,6 +189,258 @@ template <>
 struct matrix_traits<size   , 4>
 {
   using type = smatrix4;
+};
+
+template <typename _type, std::size_t _dimensions>
+struct gradient_traits
+{
+  using type = void;
+};
+template <>
+struct gradient_traits<scalar  , 2>
+{
+  using type = vector2;
+};
+template <>
+struct gradient_traits<scalar  , 3>
+{
+  using type = vector3;
+};
+template <>
+struct gradient_traits<scalar  , 4>
+{
+  using type = vector4;
+};
+template <>
+struct gradient_traits<integer , 2>
+{
+  using type = ivector2;
+};
+template <>
+struct gradient_traits<integer , 3>
+{
+  using type = ivector3;
+};
+template <>
+struct gradient_traits<integer , 4>
+{
+  using type = ivector4;
+};
+template <>
+struct gradient_traits<byte    , 2>
+{
+  using type = bvector2;
+};
+template <>
+struct gradient_traits<byte    , 3>
+{
+  using type = bvector3;
+};
+template <>
+struct gradient_traits<byte    , 4>
+{
+  using type = bvector4;
+};
+template <>
+struct gradient_traits<size    , 2>
+{
+  using type = svector2;
+};
+template <>
+struct gradient_traits<size    , 3>
+{
+  using type = svector3;
+};
+template <>
+struct gradient_traits<size    , 4>
+{
+  using type = svector4;
+};
+template <>
+struct gradient_traits<vector2 , 2>
+{
+  using type = matrix2;
+};
+template <>
+struct gradient_traits<vector3 , 3>
+{
+  using type = matrix3;
+};
+template <>
+struct gradient_traits<vector4 , 4>
+{
+  using type = matrix4;
+};
+template <>
+struct gradient_traits<ivector2, 2>
+{
+  using type = imatrix2;
+};
+template <>
+struct gradient_traits<ivector3, 3>
+{
+  using type = imatrix3;
+};
+template <>
+struct gradient_traits<ivector4, 4>
+{
+  using type = imatrix4;
+};
+template <>
+struct gradient_traits<bvector2, 2>
+{
+  using type = bmatrix2;
+};
+template <>
+struct gradient_traits<bvector3, 3>
+{
+  using type = bmatrix3;
+};
+template <>
+struct gradient_traits<bvector4, 4>
+{
+  using type = bmatrix4;
+};
+template <>
+struct gradient_traits<svector2, 2>
+{
+  using type = smatrix2;
+};
+template <>
+struct gradient_traits<svector3, 3>
+{
+  using type = smatrix3;
+};
+template <>
+struct gradient_traits<svector4, 4>
+{
+  using type = smatrix4;
+};
+
+template <typename _type, std::size_t _dimensions>
+struct potential_traits
+{
+  using type = void;
+};
+template <>
+struct potential_traits<vector2 , 2>
+{
+  using type = scalar;
+};
+template <>
+struct potential_traits<vector3 , 3>
+{
+  using type = scalar;
+};
+template <>
+struct potential_traits<vector4 , 4>
+{
+  using type = scalar;
+};
+template <>
+struct potential_traits<ivector2, 2>
+{
+  using type = integer;
+};
+template <>
+struct potential_traits<ivector3, 3>
+{
+  using type = integer;
+};
+template <>
+struct potential_traits<ivector4, 4>
+{
+  using type = integer;
+};
+template <>
+struct potential_traits<bvector2, 2>
+{
+  using type = byte;
+};
+template <>
+struct potential_traits<bvector3, 3>
+{
+  using type = byte;
+};
+template <>
+struct potential_traits<bvector4, 4>
+{
+  using type = byte;
+};
+template <>
+struct potential_traits<svector2, 2>
+{
+  using type = size;
+};
+template <>
+struct potential_traits<svector3, 3>
+{
+  using type = size;
+};
+template <>
+struct potential_traits<svector4, 4>
+{
+  using type = size;
+};
+template <>
+struct potential_traits<matrix2 , 2>
+{
+  using type = vector2;
+};
+template <>
+struct potential_traits<matrix3 , 3>
+{
+  using type = vector3;
+};
+template <>
+struct potential_traits<matrix4 , 4>
+{
+  using type = vector4;
+};
+template <>
+struct potential_traits<imatrix2, 2>
+{
+  using type = ivector2;
+};
+template <>
+struct potential_traits<imatrix3, 3>
+{
+  using type = ivector3;
+};
+template <>
+struct potential_traits<imatrix4, 4>
+{
+  using type = ivector4;
+};
+template <>
+struct potential_traits<bmatrix2, 2>
+{
+  using type = bvector2;
+};
+template <>
+struct potential_traits<bmatrix3, 3>
+{
+  using type = bvector3;
+};
+template <>
+struct potential_traits<bmatrix4, 4>
+{
+  using type = bvector4;
+};
+template <>
+struct potential_traits<smatrix2, 2>
+{
+  using type = svector2;
+};
+template <>
+struct potential_traits<smatrix3, 3>
+{
+  using type = svector3;
+};
+template <>
+struct potential_traits<smatrix4, 4>
+{
+  using type = svector4;
 };
 }
 

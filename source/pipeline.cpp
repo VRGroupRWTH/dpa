@@ -181,8 +181,9 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     std::cout    << "8.estimate_ftle\n";
     recorder.record("8.estimate_ftle"          , [&] ()
     {
+      // Note: FTLE requires stride (i.e. regular seed generation).
       if (arguments.estimate_ftle)
-        ftle_field = ftle_estimator::estimate(vector_fields.at(center), arguments.seed_generation_stride.value(), output.inactive_particles); // Note: FTLE requires stride (i.e. regular seed generation).
+        ftle_field = ftle_estimator::estimate(vector_fields.at(center), arguments.seed_generation_iterations, arguments.seed_generation_stride.value(), arguments.particle_advector_step_size, output.inactive_particles);
     });
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "9.save_ftle_field\n";

@@ -11,7 +11,7 @@ set_max_warning_level ()
 
 ##################################################    Options     ##################################################
 option(BUILD_TESTS "Build tests." OFF)
-option(DPA_FTLE_SUPPORT "Build with FTLE support (i.e. particle gathering and grid remapping)." OFF)
+option(DPA_FTLE_SUPPORT "Build with FTLE support (i.e. particle gathering and grid remapping)." ON)
 
 if   (DPA_FTLE_SUPPORT)
 list (APPEND PROJECT_COMPILE_DEFINITIONS -DDPA_FTLE_SUPPORT)
