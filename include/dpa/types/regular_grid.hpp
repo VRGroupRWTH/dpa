@@ -32,10 +32,7 @@ struct regular_grid
   // Ducks [] on the domain_type.
   element_type& cell       (const domain_type& position)
   {
-    index_type index;
-    for (std::size_t i = 0; i < dimensions; ++i)
-      index[i] = std::floor((position[i] - offset[i]) / spacing[i]);
-    return data(index);
+    return data(cell_index(position));
   }
   // Ducks [] on the domain_type.
   bool          contains   (const domain_type& position) const
