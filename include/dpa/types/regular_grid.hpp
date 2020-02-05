@@ -77,32 +77,52 @@ struct regular_grid
     index_type end_index  ;
     index_type increment  ; increment  .fill(1);
     for (std::size_t i = 0; i < dimensions; ++i)
-      end_index  [i] = data.shape()[i];
-    permute_for<index_type>([&] (const index_type& index) { function(index, data(index)); }, start_index, end_index, increment);
+      end_index[i] = data.shape()[i];
+    parallel_permute_for<index_type>([&] (const index_type& index) { function(index, data(index)); }, start_index, end_index, increment);
   }
 
   regular_grid<typename gradient_traits <element_type, dimensions>::type, dimensions> gradient ()
   {
-    using gradient_type = regular_grid<typename gradient_traits <element_type, dimensions>::type, dimensions>;
-    gradient_type gradient;
+    using gradient_type = regular_grid<typename gradient_traits<element_type, dimensions>::type, dimensions>;
 
     auto& shape = reinterpret_cast<std::array<std::size_t, dimensions> const&>(*data.shape());
+
+    gradient_type gradient;
     gradient.data.resize(shape);
+    gradient.apply([&] (const index_type& index, element_type& element)
+    {
+      // Scalar to vector:
+      // For i=1...n-1, j=1...n-1, k=1...n-1:
+      //   gradients[i, j, k][0]    = (scalars[i + 1, j    , k    ]   - scalars[i - 1, j    , k    ]  ) / (2 * spacing.x)
+      //   gradients[i, j, k][1]    = (scalars[i    , j + 1, k    ]   - scalars[i    , j - 1, k    ]  ) / (2 * spacing.y)
+      //   gradients[i, j, k][2]    = (scalars[i    , j    , k + 1]   - scalars[i    , j    , k - 1]  ) / (2 * spacing.z)
 
-    // TODO: Iterate each element. Iterate 2 in each dimension to obtain neighbors. Compute. Assign.
-
+      // Vector to tensor:
+      // For i=1...n-1, j=1...n-1, k=1...n-1:
+      //   gradients[i, j, k][0, 0] = (vectors[i + 1, j    , k    ].x - vectors[i - 1, j    , k    ].x) / (2 * spacing.x)
+      //   gradients[i, j, k][0, 1] = (vectors[i + 1, j    , k    ].y - vectors[i - 1, j    , k    ].y) / (2 * spacing.x)
+      //   gradients[i, j, k][0, 2] = (vectors[i + 1, j    , k    ].z - vectors[i - 1, j    , k    ].z) / (2 * spacing.x)
+      //   gradients[i, j, k][1, 0] = (vectors[i    , j + 1, k    ].x - vectors[i    , j - 1, k    ].x) / (2 * spacing.y)
+      //   gradients[i, j, k][1, 1] = (vectors[i    , j + 1, k    ].y - vectors[i    , j - 1, k    ].y) / (2 * spacing.y)
+      //   gradients[i, j, k][1, 2] = (vectors[i    , j + 1, k    ].z - vectors[i    , j - 1, k    ].z) / (2 * spacing.y)
+      //   gradients[i, j, k][2, 0] = (vectors[i    , j    , k + 1].x - vectors[i    , j    , k - 1].x) / (2 * spacing.z)
+      //   gradients[i, j, k][2, 1] = (vectors[i    , j    , k + 1].y - vectors[i    , j    , k - 1].y) / (2 * spacing.z)
+      //   gradients[i, j, k][2, 2] = (vectors[i    , j    , k + 1].z - vectors[i    , j    , k - 1].z) / (2 * spacing.z)
+    });
     return gradient;
   }
   regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions> potential()
   {
-    using potential_type = regular_grid<typename gradient_traits <element_type, dimensions>::type, dimensions>;
-    potential_type potential;
+    using potential_type = regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions>;
 
     auto& shape = reinterpret_cast<std::array<std::size_t, dimensions> const&>(*data.shape());
+
+    potential_type potential;
     potential.data.resize(shape);
-
-    // TODO
-
+    // Initial condition: potentials[0,0,0] = 0.
+    // For i=1...n, j=0    , k=0    : potentials[i, 0, 0] = potentials[i - 1, 0    , 0    ] + spacing.x * 0.5 * (vectors[i - 1, 0    , 0    ].x + vectors[i, 0, 0].x).
+    // For i=1...n, j=1...n, k=0    : potentials[i, j, 0] = potentials[i    , j - 1, 0    ] + spacing.y * 0.5 * (vectors[i    , j - 1, 0    ].y + vectors[i, j, 0].y).
+    // For i=1...n, j=1...n, k=1...n: potentials[i, j, k] = potentials[i    , j    , k - 1] + spacing.z * 0.5 * (vectors[i    , j    , k - 1].z + vectors[i, j, k].z).
     return potential;
   }
 
