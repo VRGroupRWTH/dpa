@@ -15,11 +15,14 @@
 
 namespace dpa
 {
-template <typename element_type, std::size_t dimensions>
+template <typename _element_type, std::size_t _dimensions>
 struct regular_grid
 {
-  using domain_type = typename vector_traits<scalar, dimensions>::type;
-  using index_type  = std::array<std::size_t, dimensions>;
+  static constexpr std::size_t dimensions = _dimensions;
+
+  using element_type = _element_type;
+  using domain_type  = typename vector_traits<scalar, dimensions>::type;
+  using index_type   = std::array<std::size_t, dimensions>;
 
   // Ducks [] on the domain_type.
   index_type    cell_index (const domain_type& position) const
@@ -90,7 +93,7 @@ struct regular_grid
 
     gradient_type gradient;
     gradient.data.resize(shape);
-    gradient.apply([&] (const index_type& index, element_type& element)
+    gradient.apply([&] (const index_type& index, typename gradient_type::element_type& element)
     {
       for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
       {
@@ -98,34 +101,8 @@ struct regular_grid
         if (index[dimension] > 0)                     prev_index[dimension] -= 1;
         if (index[dimension] < shape[dimension] - 1)  next_index[dimension] += 1;
 
-        auto difference = data(next_index) - data(prev_index);
+        element.col(dimension) = (data(next_index) - data(prev_index)) / two_spacing[dimension]; // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>
       }
-
-      // Scalar to vector:
-      // For i=1...n-1, j=1...n-1, k=1...n-1:
-      //   auto x_nominator         = scalars[i + 1, j    , k    ] - scalars[i - 1, j    , k    ]
-      //   auto y_nominator         = scalars[i    , j + 1, k    ] - scalars[i    , j - 1, k    ]
-      //   auto z_nominator         = scalars[i    , j    , k + 1] - scalars[i    , j    , k - 1]
-      //   auto denominator         = 2 * spacing
-      //   gradients[i, j, k][0]    = x_nominator / denominator.x
-      //   gradients[i, j, k][1]    = y_nominator / denominator.y
-      //   gradients[i, j, k][2]    = z_nominator / denominator.z
-
-      // Vector to tensor:
-      // For i=1...n-1, j=1...n-1, k=1...n-1:
-      //   auto x_nominator         = vectors[i + 1, j    , k    ] - vectors[i - 1, j    , k    ]
-      //   auto y_nominator         = vectors[i    , j + 1, k    ] - vectors[i    , j - 1, k    ]
-      //   auto z_nominator         = vectors[i    , j    , k + 1] - vectors[i    , j    , k - 1]
-      //   auto denominator         = 2 * spacing
-      //   gradients[i, j, k][0, 0] = x_nominator.x / denominator.x
-      //   gradients[i, j, k][1, 0] = x_nominator.y / denominator.x
-      //   gradients[i, j, k][2, 0] = x_nominator.z / denominator.x
-      //   gradients[i, j, k][0, 1] = y_nominator.x / denominator.y
-      //   gradients[i, j, k][1, 1] = y_nominator.y / denominator.y
-      //   gradients[i, j, k][2, 1] = y_nominator.z / denominator.y
-      //   gradients[i, j, k][0, 2] = z_nominator.x / denominator.z
-      //   gradients[i, j, k][1, 2] = z_nominator.y / denominator.z
-      //   gradients[i, j, k][2, 2] = z_nominator.z / denominator.z
     });
     return gradient;
   }
@@ -138,10 +115,13 @@ struct regular_grid
     potential_type potential;
     potential.data.resize(shape);
 
-    // Initial condition: potentials[0,0,0] = 0.
-    // For i=1...n, j=0    , k=0    : potentials[i, 0, 0] = potentials[i - 1, 0    , 0    ] + spacing.x * 0.5 * (vectors[i - 1, 0    , 0    ].x + vectors[i, 0, 0].x).
-    // For i=1...n, j=1...n, k=0    : potentials[i, j, 0] = potentials[i    , j - 1, 0    ] + spacing.y * 0.5 * (vectors[i    , j - 1, 0    ].y + vectors[i, j, 0].y).
-    // For i=1...n, j=1...n, k=1...n: potentials[i, j, k] = potentials[i    , j    , k - 1] + spacing.z * 0.5 * (vectors[i    , j    , k - 1].z + vectors[i, j, k].z).
+    for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
+    {
+      // Initial condition: potentials[0,0,0] = 0.
+      // For i=1...n, j=0    , k=0    : potentials[i, 0, 0] = potentials[i - 1, 0    , 0    ] + spacing.x * 0.5 * (vectors[i - 1, 0    , 0    ].x + vectors[i, 0, 0].x).
+      // For i=1...n, j=1...n, k=0    : potentials[i, j, 0] = potentials[i    , j - 1, 0    ] + spacing.y * 0.5 * (vectors[i    , j - 1, 0    ].y + vectors[i, j, 0].y).
+      // For i=1...n, j=1...n, k=1...n: potentials[i, j, k] = potentials[i    , j    , k - 1] + spacing.z * 0.5 * (vectors[i    , j    , k - 1].z + vectors[i, j, k].z).
+    }
 
     return potential;
   }
