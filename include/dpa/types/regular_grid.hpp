@@ -88,7 +88,7 @@ struct regular_grid
   {
     using gradient_type = regular_grid<typename gradient_traits<element_type, dimensions>::type, dimensions>;
 
-    auto& shape       = reinterpret_cast<std::array<std::size_t, dimensions> const&>(*data.shape());
+    auto& shape       = reinterpret_cast<index_type const&>(*data.shape());
     auto  two_spacing = 2 * spacing;
 
     gradient_type gradient;
@@ -101,7 +101,7 @@ struct regular_grid
         if (index[dimension] > 0)                     prev_index[dimension] -= 1;
         if (index[dimension] < shape[dimension] - 1)  next_index[dimension] += 1;
 
-        element.col(dimension) = (data(next_index) - data(prev_index)) / two_spacing[dimension]; // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>
+        element.col(dimension) = (data(next_index) - data(prev_index)) / two_spacing[dimension]; // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
       }
     });
     return gradient;
@@ -110,19 +110,26 @@ struct regular_grid
   {
     using potential_type = regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions>;
 
-    auto& shape = reinterpret_cast<std::array<std::size_t, dimensions> const&>(*data.shape());
+    auto& shape        = reinterpret_cast<index_type const&>(*data.shape());
+    auto  half_spacing = 0.5 * spacing;
+    
+    index_type start_index; start_index.fill(0);
+    index_type end_index  ; end_index  .fill(0);
+    index_type increment  ; increment  .fill(1);
 
     potential_type potential;
     potential.data.resize(shape);
-
     for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
     {
-      // Initial condition: potentials[0,0,0] = 0.
-      // For i=1...n, j=0    , k=0    : potentials[i, 0, 0] = potentials[i - 1, 0    , 0    ] + spacing.x * 0.5 * (vectors[i - 1, 0    , 0    ].x + vectors[i, 0, 0].x).
-      // For i=1...n, j=1...n, k=0    : potentials[i, j, 0] = potentials[i    , j - 1, 0    ] + spacing.y * 0.5 * (vectors[i    , j - 1, 0    ].y + vectors[i, j, 0].y).
-      // For i=1...n, j=1...n, k=1...n: potentials[i, j, k] = potentials[i    , j    , k - 1] + spacing.z * 0.5 * (vectors[i    , j    , k - 1].z + vectors[i, j, k].z).
-    }
+      end_index[dimension] = potential.shape()[dimension];
+      parallel_permute_for<index_type>([&] (const index_type& index)
+      {
+        auto next_index = index;
+        if (index[dimension] < shape[dimension] - 1) next_index[dimension] += 1;
 
+        potential.data(next_index) = potential.data(index) + half_spacing[dimension] * (data(next_index).col(dimension) + data(index).col(dimension));
+      }, start_index, end_index, increment);
+    }
     return potential;
   }
 
