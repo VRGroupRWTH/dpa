@@ -101,7 +101,7 @@ def combine(
               for lb in load_balancer:
                 generate(n, d, s, i, b, ppr, lb)
 
-os.mkdir("../config")
+Path("../config").mkdir(parents=True, exist_ok=True)
 combine(
   [32, 64, 128, 256],
   ["/hpcwork/rwth0432/data/oregon/astro.h5", "/hpcwork/rwth0432/data/oregon/fishtank.h5", "/hpcwork/rwth0432/data/oregon/fusion.h5"],
