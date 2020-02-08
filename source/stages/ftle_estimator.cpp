@@ -19,20 +19,21 @@ regular_scalar_field_3d ftle_estimator::estimate(
     size(scalar(original_shape[1]) / seed_stride[1]),
     size(scalar(original_shape[2]) / seed_stride[2])
   };
+  auto strided_spacing = original_vector_field.spacing.array() * seed_stride.array();
 
   auto flow_map = regular_vector_field_3d
   {
     boost::multi_array<vector3, 3>(strided_shape),
     original_vector_field.offset ,
     original_vector_field.size   ,
-    original_vector_field.spacing
+    strided_spacing
   };
   auto ftle_map = regular_scalar_field_3d
   {
     boost::multi_array<scalar, 3>(strided_shape),
     original_vector_field.offset ,
     original_vector_field.size   ,
-    original_vector_field.spacing
+    strided_spacing
   };
 
   tbb::parallel_for(std::size_t(0), local_particles.size(), std::size_t(1), [&] (const std::size_t index)
@@ -40,18 +41,18 @@ regular_scalar_field_3d ftle_estimator::estimate(
     auto& particle = local_particles[index];
     flow_map.cell(particle.original_position) = particle.position;
   });
-
+  
   auto flow_map_gradient = flow_map.gradient();
   flow_map_gradient.apply([&] (const std::array<std::size_t, 3>& index, const matrix3& value)
   {
     // Compute the spectral norm (right Cauchy-Green tensor).
     const matrix3 right_cauchy_green = value.transpose().eval() * value;
-
+  
     // Compute eigenvalues and eigenvectors.
     const Eigen::SelfAdjointEigenSolver<matrix3> solver(right_cauchy_green);
     const auto eigenvalues  = solver.eigenvalues ();
     const auto eigenvectors = solver.eigenvectors();
-
+  
     // Compute FTLE.
     ftle_map.data(index) = std::log(std::sqrt(eigenvalues.maxCoeff())) / std::abs(step_size * (seed_maximum_iterations - 0)); // TODO: Subtract remaining iterations of associated particle.
   });
