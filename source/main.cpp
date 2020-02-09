@@ -9,45 +9,87 @@ template <typename grid_type>
 void print_grid(const grid_type& grid)
 {
   auto shape = grid.data.shape();
-  //for (auto z = 0; z < shape[2]; ++z)
-  //{
-    //std::cout << "Z" << z << "\n";
-    for (auto y = 0; y < shape[1]; ++y)
+  for (auto y = 0; y < shape[1]; ++y)
+  {
+    for (auto x = 0; x < shape[0]; ++x)
     {
-      for (auto x = 0; x < shape[0]; ++x)
-      {
-        std::cout << grid.data[x][y] << " ";
-      }
-      std::cout << "\n";
+      std::cout << grid.data[x][y] << "\n";
     }
-    //std::cout << "\n";
-  //}
+    std::cout << "\n";
+  }
 }
 
 std::int32_t main(std::int32_t argc, char** argv)
 {
-  dpa::regular_scalar_field_2d original {boost::multi_array<dpa::scalar, 2>(boost::extents[3][3]), dpa::vector2::Zero(), dpa::vector2::Ones(), 1.0f / 3.0f * dpa::vector2::Ones()};
-  original.data[1][1] = 0.22f;
-  original.data[0][1] = 0.11f;
-  original.data[2][1] = 0.11f;
-  original.data[1][0] = 0.11f;
-  original.data[1][2] = 0.11f;
+  //dpa::regular_scalar_field_2d original {boost::multi_array<dpa::scalar, 2>(boost::extents[3][3]), dpa::vector2::Zero(), dpa::vector2::Ones(), 1.0f / 3.0f * dpa::vector2::Ones()};
+  //original.data[1][1] = 0.22f;
+  //original.data[0][1] = 0.11f;
+  //original.data[2][1] = 0.11f;
+  //original.data[1][0] = 0.11f;
+  //original.data[1][2] = 0.11f;
+  //
+  //auto gradient_1  = original   .gradient ();
+  //auto gradient_2  = gradient_1 .gradient ();
+  //auto potential_1 = gradient_2 .potential();
+  //auto potential_2 = potential_1.potential();
+  //
+  //std::cout << "Original (Scalar) \n";
+  //print_grid<>(original   );
+  //std::cout << "Gradient 1 (Vector) \n";
+  //print_grid<>(gradient_1 );
+  //std::cout << "Gradient 2 (Tensor) \n";
+  //print_grid<>(gradient_2 );
+  //std::cout << "Potential 1 (Vector)\n";
+  //print_grid<>(potential_1);
+  //std::cout << "Potential 2 (Scalar)\n";
+  //print_grid<>(potential_2);
 
-  auto gradient_1  = original   .gradient ();
-  auto gradient_2  = gradient_1 .gradient ();
-  auto potential_1 = gradient_2 .potential();
-  auto potential_2 = potential_1.potential();
+  //dpa::regular_vector_field_2d original {boost::multi_array<dpa::vector2, 2>(boost::extents[3][3]), dpa::vector2::Zero(), dpa::vector2::Ones(), 1.0f / 3.0f * dpa::vector2::Ones()};
+  //auto one_over_sqrt_2 = 1.0 / std::sqrt(2.0);
+  //original.data[0][0] = dpa::vector2(-one_over_sqrt_2, -one_over_sqrt_2);
+  //original.data[1][0] = dpa::vector2( 0.0            , -1.0            );
+  //original.data[2][0] = dpa::vector2( one_over_sqrt_2, -one_over_sqrt_2);
+  //original.data[0][1] = dpa::vector2(-1.0            ,  0.0            );
+  //original.data[1][1] = dpa::vector2( 0.0            ,  0.0            );
+  //original.data[2][1] = dpa::vector2( 1.0            ,  0.0            );
+  //original.data[0][2] = dpa::vector2(-one_over_sqrt_2,  one_over_sqrt_2);
+  //original.data[1][2] = dpa::vector2( 0.0            ,  1.0            );
+  //original.data[2][2] = dpa::vector2( one_over_sqrt_2,  one_over_sqrt_2);
+  //
+  //auto gradient_1  = original   .gradient ();
+  //auto potential_1 = gradient_1 .potential();
+  //auto potential_2 = potential_1.potential();
+  //
+  //std::cout << "Original (Vector) \n";
+  //print_grid<>(original   );
+  //std::cout << "Gradient 1 (Tensor) \n";
+  //print_grid<>(gradient_1 );
+  //std::cout << "Potential 1 (Vector)\n";
+  //print_grid<>(potential_1);
+  //std::cout << "Potential 2 (Scalar)\n";
+  //print_grid<>(potential_2);
 
-  std::cout << "Original (Scalar) \n";
+  dpa::regular_vector_field_2d original {boost::multi_array<dpa::vector2, 2>(boost::extents[3][3]), dpa::vector2::Zero(), dpa::vector2::Ones(), 1.0f / 3.0f * dpa::vector2::Ones()};
+  auto one_over_sqrt_2 = 1.0 / std::sqrt(2.0);
+  original.data[0][0] = dpa::vector2(-1.0, -1.0);
+  original.data[1][0] = dpa::vector2( 0.0, -1.0);
+  original.data[2][0] = dpa::vector2( 1.0, -1.0);
+  original.data[0][1] = dpa::vector2(-1.0,  0.0);
+  original.data[1][1] = dpa::vector2( 0.0,  0.0);
+  original.data[2][1] = dpa::vector2( 1.0,  0.0);
+  original.data[0][2] = dpa::vector2(-1.0,  1.0);
+  original.data[1][2] = dpa::vector2( 0.0,  1.0);
+  original.data[2][2] = dpa::vector2( 1.0,  1.0);
+  
+  auto potential_1 = original   .potential();
+  auto gradient_1  = potential_1.gradient ();
+  
+  std::cout << "Original (Vector) \n";
   print_grid<>(original   );
-  std::cout << "Gradient 1 (Vector) \n";
-  print_grid<>(gradient_1 );
-  std::cout << "Gradient 2 (Tensor) \n";
-  print_grid<>(gradient_2 );
-  std::cout << "Potential 1 (Vector)\n";
+  std::cout << "Potential 1 (Scalar)\n";
   print_grid<>(potential_1);
-  std::cout << "Potential 2 (Scalar)\n";
-  print_grid<>(potential_2);
+  std::cout << "Gradient 1 (Vector) \n";
+  print_grid<>(gradient_1);
 
   return dpa::pipeline().run(argc, argv);
 }
