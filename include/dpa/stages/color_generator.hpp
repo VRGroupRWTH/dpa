@@ -13,6 +13,7 @@ public:
   static void generate_from_tangents          (integral_curves& integral_curves);
   static void generate_from_angular_velocities(integral_curves& integral_curves);
   static void generate_from_velocities        (integral_curves& integral_curves, const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields);
+  static void generate_from_potentials        (integral_curves& integral_curves, const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields);
 };
 }
 

@@ -73,4 +73,25 @@ void color_generator::generate_from_velocities        (integral_curves& integral
     });
   }
 }
+void color_generator::generate_from_potentials        (integral_curves& integral_curves, const std::unordered_map<relative_direction, regular_vector_field_3d>& vector_fields)
+{
+  std::unordered_map<relative_direction, regular_scalar_field_3d> scalar_fields;
+  for (auto& entry : vector_fields)
+    scalar_fields[entry.first] = entry.second.potential();
+
+  for (auto& integral_curve : integral_curves)
+  {
+    auto& vertices = integral_curve.vertices;
+    auto& colors   = integral_curve.colors  ;
+
+    colors = std::vector<scalar>(vertices.size(), 0);
+    tbb::parallel_for(std::size_t(0), vertices.size(), std::size_t(1), [&] (const std::size_t vertex_index)
+    {
+      if (vertices[vertex_index] != terminal_value<vector3>())
+        for (auto& scalar_field : scalar_fields)
+          if (scalar_field.second.contains(vertices[vertex_index]))
+            std::get<std::vector<scalar>>(colors)[vertex_index] = scalar_field.second.interpolate(vertices[vertex_index]);
+    });
+  }
+}
 }

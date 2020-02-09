@@ -9,7 +9,6 @@
 
 #include <boost/multi_array.hpp>
 
-#include <dpa/math/indexing.hpp>
 #include <dpa/math/permute_for.hpp>
 #include <dpa/types/basic_types.hpp>
 
@@ -89,9 +88,9 @@ struct regular_grid
     using gradient_type = regular_grid<typename gradient_traits<element_type, dimensions>::type, dimensions>;
 
     auto& shape       = reinterpret_cast<index_type const&>(*data.shape());
-    auto  two_spacing = 2 * spacing;
+    auto  two_spacing = domain_type(2 * spacing);
 
-    gradient_type gradient;
+    gradient_type gradient {boost::multi_array<typename gradient_type::element_type, dimensions>(), offset, size, spacing};
     gradient.data.resize(shape);
     gradient.apply([&] (const index_type& index, typename gradient_type::element_type& element)
     {
@@ -101,33 +100,44 @@ struct regular_grid
         if (index[dimension] > 0)                     prev_index[dimension] -= 1;
         if (index[dimension] < shape[dimension] - 1)  next_index[dimension] += 1;
 
-        element.col(dimension) = (data(next_index) - data(prev_index)) / two_spacing[dimension]; // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
+        element.col(dimension).array() = (data(next_index) - data(prev_index)) / two_spacing[dimension]; // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
       }
     });
     return gradient;
   }
-  regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions> potential()
+  regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions> potential() const
   {
     using potential_type = regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions>;
 
     auto& shape        = reinterpret_cast<index_type const&>(*data.shape());
-    auto  half_spacing = 0.5 * spacing;
+    auto  half_spacing = domain_type(0.5 * spacing);
     
     index_type start_index; start_index.fill(0);
     index_type end_index  ; end_index  .fill(0);
     index_type increment  ; increment  .fill(1);
 
-    potential_type potential;
+    potential_type potential {boost::multi_array<typename potential_type::element_type, dimensions>(), offset, size, spacing};
     potential.data.resize(shape);
     for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
     {
-      end_index[dimension] = potential.shape()[dimension];
+      end_index[dimension] = shape[dimension];
       parallel_permute_for<index_type>([&] (const index_type& index)
       {
-        auto next_index = index;
-        if (index[dimension] < shape[dimension] - 1) next_index[dimension] += 1;
+        auto prev_index = index, next_index = index;
+        if (index[dimension] > 0)                     prev_index[dimension] -= 1;
+        if (index[dimension] < shape[dimension] - 1)  next_index[dimension] += 1;
 
-        potential.data(next_index) = potential.data(index) + half_spacing[dimension] * (data(next_index).col(dimension) + data(index).col(dimension));
+        if constexpr (std::is_arithmetic<typename potential_type::element_type>::value)
+          potential.data(index) = half_spacing[dimension] * potential_type::element_type((data(prev_index).col(dimension).array() + data(next_index).col(dimension).array()).value());
+        else
+          potential.data(index) = half_spacing[dimension] * potential_type::element_type( data(prev_index).col(dimension).array() + data(next_index).col(dimension).array());
+      }, start_index, end_index, increment);
+      permute_for<index_type>([&] (const index_type& index)
+      {
+        auto prev_index = index;
+        if (index[dimension] > 0) prev_index[dimension] -= 1;
+
+        potential.data(index) += potential.data(prev_index);
       }, start_index, end_index, increment);
     }
     return potential;
