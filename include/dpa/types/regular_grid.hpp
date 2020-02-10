@@ -14,6 +14,7 @@
 
 namespace dpa
 {
+// Hessian and Laplacian are available through the gradient operation.
 template <typename _element_type, std::size_t _dimensions>
 struct regular_grid
 {
@@ -141,7 +142,8 @@ struct regular_grid
     }
     return potential;
   }
-  // TODO: Orient Eigenvectors, Hessian, Laplacian, first-moments, second-moments.
+
+  // TODO: Orient Eigenvectors, compute structure tensor.
 
   boost::multi_array<element_type, dimensions> data    {};
   domain_type                                  offset  {};
