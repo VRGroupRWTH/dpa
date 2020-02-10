@@ -2,6 +2,10 @@
 
 #include <boost/mpi/environment.hpp>
 
+#ifdef DPA_SCOREP_SUPPORT
+#include <scorep/SCOREP_User.h>
+#endif
+
 #include <dpa/benchmark/benchmark.hpp>
 #include <dpa/stages/argument_parser.hpp>
 #include <dpa/stages/color_generator.hpp>
@@ -21,6 +25,43 @@ namespace dpa
 {
 std::int32_t pipeline::run(std::int32_t argc, char** argv)
 {
+#ifdef DPA_SCOREP_SUPPORT
+  SCOREP_USER_REGION_DEFINE(handle_1  )
+  SCOREP_USER_REGION_DEFINE(handle_2  )
+  SCOREP_USER_REGION_DEFINE(handle_3  )
+  SCOREP_USER_REGION_DEFINE(handle_4_1)
+  SCOREP_USER_REGION_DEFINE(handle_4_2)
+  SCOREP_USER_REGION_DEFINE(handle_4_3)
+  SCOREP_USER_REGION_DEFINE(handle_4_4)
+  SCOREP_USER_REGION_DEFINE(handle_4_5)
+  SCOREP_USER_REGION_DEFINE(handle_4_6)
+  SCOREP_USER_REGION_DEFINE(handle_4_7)
+  SCOREP_USER_REGION_DEFINE(handle_4_8)
+  SCOREP_USER_REGION_DEFINE(handle_4_9)
+  SCOREP_USER_REGION_DEFINE(handle_5  )
+  SCOREP_USER_REGION_DEFINE(handle_6  )
+  SCOREP_USER_REGION_DEFINE(handle_7  )
+  SCOREP_USER_REGION_DEFINE(handle_8  )
+  SCOREP_USER_REGION_DEFINE(handle_9  )
+  SCOREP_USER_REGION_INIT  (handle_1  , "1.domain_partitioning"       , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_2  , "2.data_loading"              , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_3  , "3.seed_generation"           , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_1, "4.1.load_balance_distribute" , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_2, "4.2.compute_round_state"     , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_3, "4.3.allocate_integral_curves", SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_4, "4.4.advect"                  , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_5, "4.5.load_balance_collect"    , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_6, "4.6.out_of_bounds_distribute", SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_7, "4.7.check_completion"        , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_8, "4.8.gather_particles"        , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_4_9, "4.9.prune_integral_curves"   , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_5  , "5.index_generation"          , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_6  , "6.color_generation"          , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_7  , "7.save_integral_curves"      , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_8  , "8.estimate_ftle"             , SCOREP_USER_REGION_TYPE_FUNCTION)
+  SCOREP_USER_REGION_INIT  (handle_9  , "9.save_ftle_field"           , SCOREP_USER_REGION_TYPE_FUNCTION)
+#endif
+
   boost::mpi::environment environment(argc, argv, boost::mpi::threading::level::serialized);
   std::cout << "Started pipeline on " << environment.processor_name() << "\n";
 
@@ -49,21 +90,36 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     std::cout    << "1.domain_partitioning\n";
     recorder.record("1.domain_partitioning", [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_1)
+      #endif
       partitioner.set_domain_size(loader.load_dimensions(), svector3::Ones());
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_1)
+      #endif
     });
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "2.data_loading\n";
     recorder.record("2.data_loading"       , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_2)
+      #endif
       vector_fields = loader.load_vector_fields(
         arguments.particle_advector_load_balancer == "diffuse_constant"                       || 
         arguments.particle_advector_load_balancer == "diffuse_lesser_average"                 || 
         arguments.particle_advector_load_balancer == "diffuse_greater_limited_lesser_average" );
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_2)
+      #endif
     });
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "3.seed_generation\n";
     recorder.record("3.seed_generation"    , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_3)
+      #endif
       const auto offset        = vector_fields[center].spacing.array() * partitioner.partitions().at(center).offset.cast<scalar>().array();
       const auto size          = vector_fields[center].spacing.array() * partitioner.block_size()                  .cast<scalar>().array();
       const auto iterations    = arguments.seed_generation_iterations;
@@ -94,6 +150,9 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
           iterations   , 
           process_index,
           boundaries   );
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_3)
+      #endif
     });
 
     partitioner.cartesian_communicator()->barrier();
@@ -107,37 +166,79 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       std::cout    << "4.1." + std::to_string(rounds) + ".load_balance_distribute\n";
       recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
       {
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_ENTER(handle_4_1)
+        #endif
                      advector.load_balance_distribute (state);
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_END  (handle_4_1)
+        #endif
       });
       std::cout    << "4.2." + std::to_string(rounds) + ".compute_round_state\n";
       recorder.record("4.2." + std::to_string(rounds) + ".compute_round_state"      , [&] ()
       {
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_ENTER(handle_4_2)
+        #endif
         round_state = advector.compute_round_state    (state);
+         #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_END  (handle_4_2)
+        #endif
       });
       std::cout    << "4.3." + std::to_string(rounds) + ".allocate_integral_curves\n";
       recorder.record("4.3." + std::to_string(rounds) + ".allocate_integral_curves", [&] ()
       {
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_ENTER(handle_4_3)
+        #endif
                      advector.allocate_integral_curves(       round_state, output);
+         #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_END  (handle_4_3)
+        #endif
       });
       std::cout    << "4.4." + std::to_string(rounds) + ".advect\n";
       recorder.record("4.4." + std::to_string(rounds) + ".advect"                  , [&] ()
       {
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_ENTER(handle_4_4)
+        #endif
                      advector.advect                  (state, round_state, output);
+         #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_END  (handle_4_4)
+        #endif
       });
       std::cout    << "4.5." + std::to_string(rounds) + ".load_balance_collect\n";
       recorder.record("4.5." + std::to_string(rounds) + ".load_balance_collect"    , [&] ()
       {
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_ENTER(handle_4_5)
+        #endif
                      advector.load_balance_collect    (state, round_state, output);
+         #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_END  (handle_4_5)
+        #endif
       });
       std::cout    << "4.6." + std::to_string(rounds) + ".out_of_bounds_distribute\n";
       recorder.record("4.6." + std::to_string(rounds) + ".out_of_bounds_distribute", [&] ()
       {
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_ENTER(handle_4_6)
+        #endif
                      advector.out_of_bounds_distribute(state, round_state);
+         #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_END  (handle_4_6)
+        #endif
       });
       std::cout    << "4.7." + std::to_string(rounds) + ".check_completion\n";
       recorder.record("4.7." + std::to_string(rounds) + ".check_completion"        , [&] ()
       {
+        #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_ENTER(handle_4_7)
+        #endif
         complete =   advector.check_completion        (state);
+         #ifdef DPA_SCOREP_SUPPORT
+          SCOREP_USER_REGION_END  (handle_4_7)
+        #endif
       });  
       rounds++;
     }
@@ -145,52 +246,94 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     std::cout    << "4.8.gather_particles\n";
     recorder.record("4.8.gather_particles"     , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_4_8)
+      #endif
       advector.gather_particles     (output);
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_4_8)
+      #endif
     });
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "4.9.prune_integral_curves\n";
     recorder.record("4.9.prune_integral_curves", [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_4_9)
+      #endif
       advector.prune_integral_curves(output);
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_4_9)
+      #endif
     });
     
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "5.index_generation\n";
     recorder.record("5.index_generation"       , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_5)
+      #endif
       if (arguments.particle_advector_record)
         index_generator::generate(output.integral_curves, arguments.particle_advector_particles_per_round * arguments.seed_generation_iterations > std::numeric_limits<std::uint32_t>::max());
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_5)
+      #endif
     });
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "6.color_generation\n";
     recorder.record("6.color_generation"       , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_6)
+      #endif
       if (arguments.particle_advector_record)
         color_generator::generate_from_angular_velocities(output.integral_curves);
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_6)
+      #endif
     });
 
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "7.save_integral_curves\n";
     recorder.record("7.save_integral_curves"   , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_7)
+      #endif
       if (arguments.particle_advector_record)
         integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save(output.integral_curves);
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_7)
+      #endif
     });
 
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "8.estimate_ftle\n";
     recorder.record("8.estimate_ftle"          , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_8)
+      #endif
       // Note: FTLE requires stride (i.e. regular seed generation).
       if (arguments.estimate_ftle)
         ftle_field = ftle_estimator::estimate(vector_fields.at(center), arguments.seed_generation_iterations, arguments.seed_generation_stride.value(), arguments.particle_advector_step_size, output.inactive_particles);
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_8)
+      #endif
     });
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "9.save_ftle_field\n";
     recorder.record("9.save_ftle_field"        , [&] ()
     {
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_ENTER(handle_9)
+      #endif
       if (arguments.estimate_ftle)
         regular_grid_saver(&partitioner, arguments.output_dataset_filepath).save(ftle_field.value());
+      #ifdef DPA_SCOREP_SUPPORT
+        SCOREP_USER_REGION_END  (handle_9)
+      #endif
     });
   }, 1);
   benchmark_session.gather();
