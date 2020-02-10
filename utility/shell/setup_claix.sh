@@ -5,8 +5,7 @@ ROOT_DIRECTORY=/hpcwork/rwth0432
 
 # Enable modules.
 module swap intelmpi openmpi/4.0.2
-module load gcc/9 cmake/3.13.2
-module load python/3.6.0
+module load DEV-TOOLS gcc/9 cmake/3.13.2 python/3.6.0 scorep/6.0
 
 # Install git.
 cd $ROOT_DIRECTORY

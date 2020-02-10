@@ -12,9 +12,14 @@ set_max_warning_level ()
 ##################################################    Options     ##################################################
 option(BUILD_TESTS "Build tests." OFF)
 option(DPA_FTLE_SUPPORT "Build with FTLE support (i.e. particle gathering and grid remapping)." ON)
+option(DPA_SCOREP_SUPPORT "Build with SCORE-P support (i.e. performance benchmarking)." ON)
 
 if   (DPA_FTLE_SUPPORT)
 list (APPEND PROJECT_COMPILE_DEFINITIONS -DDPA_FTLE_SUPPORT)
+endif()
+
+if   (DPA_SCOREP_SUPPORT)
+list (APPEND PROJECT_COMPILE_DEFINITIONS -DDPA_SCOREP_SUPPORT -DSCOREP_USER_ENABLE)
 endif()
 
 ##################################################    Sources     ##################################################
@@ -66,6 +71,11 @@ list          (APPEND PROJECT_LIBRARIES TBB::tbb TBB::tbbmalloc)
 if(UNIX)
   find_package(Threads REQUIRED)
   list        (APPEND PROJECT_LIBRARIES Threads::Threads)
+endif()
+
+if(DPA_SCOREP_SUPPORT)
+  find_package  (ScoreP REQUIRED)
+  import_library(SCOREP_INCLUDE_DIR)
 endif()
 
 # ADD LIBRARIES HERE. Vcpkg toolchain file will automatically locate them.
