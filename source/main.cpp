@@ -34,35 +34,36 @@ std::int32_t main(std::int32_t argc, char** argv)
   {
     element.normalize();
   });
-  //auto gradient_2  = gradient_1 .gradient ();
-  //gradient_2.apply([ ] (const std::array<std::size_t, 2>& index, dpa::matrix2& element)
-  //{
-  //  const Eigen::SelfAdjointEigenSolver<dpa::matrix2> solver(element);
-  //  const auto eigenvalues  = solver.eigenvalues ();
-  //  const auto eigenvectors = solver.eigenvectors();
-  //  element = eigenvectors;
-  //  element.col(0) = element.col(0) * eigenvalues[0];
-  //  element.col(1) = element.col(1) * eigenvalues[1];
-  //  element /= element.determinant();
-  //});
-  auto potential_1 = gradient_1.potential();
-  //potential_1.apply([ ] (const std::array<std::size_t, 2>& index, dpa::vector2& element)
-  //{
-  //  element.normalize();
-  //});
-  //auto potential_2 = potential_1.potential();
+  auto gradient_2  = gradient_1 .gradient ();
+  gradient_2.apply([ ] (const std::array<std::size_t, 2>& index, dpa::matrix2& element)
+  {
+    //element        = element / element.norm();
+    const auto svd = element.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
+    element = svd.matrixU() * Eigen::DiagonalMatrix<dpa::scalar, 2, 2>(svd.singularValues());
+
+    //const Eigen::SelfAdjointEigenSolver<dpa::matrix2> solver(element.transpose().eval() * element);
+    //const auto eigenvalues  = solver.eigenvalues ();
+    //const auto eigenvectors = solver.eigenvectors();
+    //element = eigenvectors * Eigen::DiagonalMatrix<dpa::scalar, 2, 2>(eigenvalues[0], eigenvalues[1]);
+  });
+  auto potential_1 = gradient_2.potential();
+  potential_1.apply([ ] (const std::array<std::size_t, 2>& index, dpa::vector2& element)
+  {
+    element.normalize();
+  });
+  auto potential_2 = potential_1.potential();
   
   std::cout << "Original (Scalar) \n";
   print_grid<>(original   );
   std::cout << "Gradient 1 (Vector) \n";
   print_grid<>(gradient_1 );
-  //std::cout << "Gradient 2 (Tensor) \n";
-  //print_grid<>(gradient_2 );
+  std::cout << "Gradient 2 (Tensor) \n";
+  print_grid<>(gradient_2 );
   std::cout << "Potential 1 (Vector)\n";
   print_grid<>(potential_1);
-  //std::cout << "Potential 2 (Scalar)\n";
-  //print_grid<>(potential_2);
-
+  std::cout << "Potential 2 (Scalar)\n";
+  print_grid<>(potential_2);
+  
   //dpa::regular_vector_field_2d original {boost::multi_array<dpa::vector2, 2>(boost::extents[3][3]), dpa::vector2::Zero(), dpa::vector2::Ones(), 1.0f / 3.0f * dpa::vector2::Ones()};
   //auto one_over_sqrt_2 = 1.0 / std::sqrt(2.0);
   //original.data[0][0] = dpa::vector2(-one_over_sqrt_2, -one_over_sqrt_2);
