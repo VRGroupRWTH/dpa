@@ -89,8 +89,7 @@ struct regular_grid
 
     auto& shape = reinterpret_cast<index_type const&>(*data.shape());
 
-    gradient_type gradient {boost::multi_array<typename gradient_type::element_type, dimensions>(), offset, size, spacing};
-    gradient.data.resize(shape);
+    gradient_type gradient {boost::multi_array<typename gradient_type::element_type, dimensions>(shape), offset, size, spacing};
     gradient.apply([&] (const index_type& index, typename gradient_type::element_type& element)
     {
       for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
@@ -100,7 +99,8 @@ struct regular_grid
         if (index[dimension] > 0)                    { prev_index[dimension] -= 1; distance++; }
         if (index[dimension] < shape[dimension] - 1) { next_index[dimension] += 1; distance++; }
 
-        element.col(dimension).array() = (data(next_index) - data(prev_index)) / (distance * spacing)[dimension]; // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
+        // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
+        element.col(dimension).array() =  (data(next_index) - data(prev_index)) / (distance * spacing)[dimension];
       }
     });
     return gradient;
@@ -111,44 +111,23 @@ struct regular_grid
 
     auto& shape = reinterpret_cast<index_type const&>(*data.shape());
     
-    index_type start_index; start_index.fill(0);
-    index_type end_index  ; end_index  .fill(1);
-    index_type increment  ; increment  .fill(1);
-
-    potential_type potential {boost::multi_array<typename potential_type::element_type, dimensions>(), offset, size, spacing};
-    potential.data.resize(shape);
-    for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
+    potential_type potential {boost::multi_array<typename potential_type::element_type, dimensions>(shape), offset, size, spacing};
+    potential.apply([&](const index_type& index, typename potential_type::element_type& element)
     {
-      end_index[dimension] = shape[dimension];
-      parallel_permute_for<index_type>([&] (const index_type& index)
+      for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
       {
         auto prev_index = index, next_index = index;
         auto distance   = 0;
         if (index[dimension] > 0)                    { prev_index[dimension] -= 1; distance++; }
         if (index[dimension] < shape[dimension] - 1) { next_index[dimension] += 1; distance++; }
 
+        // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
         if constexpr (std::is_arithmetic<typename potential_type::element_type>::value)
-          potential.data(index) += (distance * spacing)[dimension] * potential_type::element_type((data(prev_index).col(dimension).array() + data(next_index).col(dimension).array()).value());
-        else
-          potential.data(index) += (distance * spacing)[dimension] * potential_type::element_type( data(prev_index).col(dimension).array() + data(next_index).col(dimension).array());
-      }, start_index, end_index, increment);
-
-      //auto partial_start_index = start_index;
-      //auto partial_end_index   = end_index  ;
-      //for (std::size_t i = 1; i < shape[dimension]; ++i)
-      //{
-      //  partial_start_index[dimension] = i;
-      //  partial_end_index  [dimension] = i + 1;
-      //  
-      //  parallel_permute_for<index_type>([&] (const index_type& index)
-      //  {
-      //    auto prev_index = index;
-      //    prev_index[dimension] -= 1;
-      //
-      //    potential.data(index) += potential.data(prev_index);
-      //  }, partial_start_index, partial_end_index, increment);
-      //}
-    }
+          element += (distance * spacing)[dimension] * potential_type::element_type((data(prev_index).col(dimension).array() + data(next_index).col(dimension).array()).value());
+        else                                           
+          element += (distance * spacing)[dimension] * potential_type::element_type( data(prev_index).col(dimension).array() + data(next_index).col(dimension).array());
+      }
+    });
     return potential;
   }
   // TODO: Hessian, Laplacian, first-moments, second-moments.
