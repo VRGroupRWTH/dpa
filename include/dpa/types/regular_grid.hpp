@@ -1,25 +1,44 @@
 #ifndef DPA_TYPES_REGULAR_GRID_HPP
 #define DPA_TYPES_REGULAR_GRID_HPP
 
+#include <array>
 #include <cmath>
 #include <cstddef>
+#include <type_traits>
 #include <vector>
 
 #include <boost/multi_array.hpp>
 
-#include <dpa/math/indexing.hpp>
 #include <dpa/math/permute_for.hpp>
+#include <dpa/types/basic_types.hpp>
 
 namespace dpa
 {
-template <typename element_type, std::size_t dimensions>
+// Hessian and Laplacian are available through the gradient operation.
+template <typename _element_type, std::size_t _dimensions>
 struct regular_grid
 {
-  using domain_type = typename vector_traits<scalar, dimensions>::type;
-  using index_type  = std::array<std::size_t, dimensions>;
+  static constexpr std::size_t dimensions = _dimensions;
+
+  using element_type = _element_type;
+  using domain_type  = typename vector_traits<scalar, dimensions>::type;
+  using index_type   = std::array<std::size_t, dimensions>;
 
   // Ducks [] on the domain_type.
-  bool         contains   (const domain_type& position) const
+  index_type    cell_index (const domain_type& position) const
+  {
+    index_type index;
+    for (std::size_t i = 0; i < dimensions; ++i)
+      index[i] = std::floor((position[i] - offset[i]) / spacing[i]);
+    return index;
+  }
+  // Ducks [] on the domain_type.
+  element_type& cell       (const domain_type& position)
+  {
+    return data(cell_index(position));
+  }
+  // Ducks [] on the domain_type.
+  bool          contains   (const domain_type& position) const
   {
     for (std::size_t i = 0; i < dimensions; ++i)
     {
@@ -30,7 +49,7 @@ struct regular_grid
     return true;
   }
   // Ducks [] on the domain_type.
-  element_type interpolate(const domain_type& position) const
+  element_type  interpolate(const domain_type& position) const
   {
     domain_type weights    ;
     index_type  start_index;
@@ -54,6 +73,77 @@ struct regular_grid
         intermediates[j] = (scalar(1) - weights[i]) * intermediates[2 * j] + weights[i] * intermediates[2 * j + 1];
     return intermediates[0];
   }
+
+  void          apply      (std::function<void(const index_type&, element_type&)> function)
+  {
+    index_type start_index; start_index.fill(0);
+    index_type end_index  ;
+    index_type increment  ; increment  .fill(1);
+    for (std::size_t i = 0; i < dimensions; ++i)
+      end_index[i] = data.shape()[i];
+    parallel_permute_for<index_type>([&] (const index_type& index) { function(index, data(index)); }, start_index, end_index, increment);
+  }
+
+  regular_grid<typename gradient_traits <element_type, dimensions>::type, dimensions> gradient ()
+  {
+    using gradient_type = regular_grid<typename gradient_traits<element_type, dimensions>::type, dimensions>;
+
+    auto& shape       = reinterpret_cast<index_type const&>(*data.shape());
+    auto  two_spacing = domain_type(2 * spacing);
+
+    gradient_type gradient {boost::multi_array<typename gradient_type::element_type, dimensions>(shape), offset, size, spacing};
+    gradient.apply([&] (const index_type& index, typename gradient_type::element_type& element)
+    {
+      for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
+      {
+        auto prev_index = index, next_index = index;
+        if (index[dimension] > 0)                    prev_index[dimension] -= 1;
+        if (index[dimension] < shape[dimension] - 1) next_index[dimension] += 1;
+
+        // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
+        element.col(dimension).array() = (data(next_index) - data(prev_index)) / two_spacing[dimension];
+      }
+    });
+    return gradient;
+  }
+  regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions> potential() const
+  {
+    using potential_type = regular_grid<typename potential_traits<element_type, dimensions>::type, dimensions>;
+
+    auto& shape       = reinterpret_cast<index_type const&>(*data.shape());
+    auto  two_spacing = domain_type(2 * spacing);
+    
+    index_type start_index; start_index.fill(0);
+    index_type end_index  ; end_index  .fill(1);
+    index_type increment  ; increment  .fill(1);
+
+    potential_type potential {boost::multi_array<typename potential_type::element_type, dimensions>(shape), offset, size, spacing};
+    for (std::size_t dimension = 0; dimension < dimensions; ++dimension)
+    {
+      for (std::size_t serial_index = 1; serial_index < shape[dimension]; ++serial_index)
+      {
+        auto partial_start_index = start_index; partial_start_index[dimension] = serial_index    ;
+        auto partial_end_index   = end_index  ; partial_end_index  [dimension] = serial_index + 1;
+
+        parallel_permute_for<index_type>([&] (const index_type& index)
+        {
+          auto prev_index = index, next_index = index;
+          if (index[dimension] > 0)                    prev_index[dimension] -= 1;
+          if (index[dimension] < shape[dimension] - 1) next_index[dimension] += 1;
+
+          // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
+          if constexpr (std::is_arithmetic<typename potential_type::element_type>::value)
+            potential.data(index) = potential.data(prev_index) + two_spacing[dimension] * potential_type::element_type((data(prev_index).col(dimension).array() + data(index).col(dimension).array()).value());
+          else                                           
+            potential.data(index) = potential.data(prev_index) + two_spacing[dimension] * potential_type::element_type( data(prev_index).col(dimension).array() + data(index).col(dimension).array());
+        }, partial_start_index, partial_end_index, increment);
+      }
+      end_index[dimension] = shape[dimension];
+    }
+    return potential;
+  }
+
+  // TODO: Orient Eigenvectors, compute structure tensor.
 
   boost::multi_array<element_type, dimensions> data    {};
   domain_type                                  offset  {};

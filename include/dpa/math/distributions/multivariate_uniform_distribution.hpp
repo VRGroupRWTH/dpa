@@ -20,7 +20,7 @@ public:
   using result_element_type = typename result_type::value_type;
   using scalar_distribution = underlying_distribution;
 
-  static constexpr std::size_t result_element_count = typename std::tuple_size<result_type>::value;
+  static constexpr std::size_t result_element_count = std::tuple_size<result_type>::value;
 
   struct param_type
   {
@@ -132,13 +132,13 @@ public:
     parameters_ = parameters;
   }
   
-  template<typename engine>
-  result_type operator()       (engine& engine) const
+  template<typename engine_type>
+  result_type operator()       (engine_type& engine) const
   {
     return evaluate(engine, parameters_);
   }
-  template<typename engine>
-  result_type operator()       (engine& engine, const param_type& parameters) const
+  template<typename engine_type>
+  result_type operator()       (engine_type& engine, const param_type& parameters) const
   {
     return evaluate(engine, parameters);
   } 
@@ -170,11 +170,11 @@ public:
   }
 
 protected:
-  template<typename engine>
-  result_type evaluate         (engine& engine, const param_type& parameters) const
+  template<typename engine_type>
+  result_type evaluate         (engine_type& engine, const param_type& parameters) const
   {
     result_type value;
-    auto& _distributions = distributions();
+    auto& _distributions = const_cast<std::array<scalar_distribution, result_element_count>&>(distributions());
     for (auto i = 0; i < _distributions.size(); ++i)
       value[i] = _distributions[i](engine);
     return value;

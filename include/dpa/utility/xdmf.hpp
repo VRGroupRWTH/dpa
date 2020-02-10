@@ -10,7 +10,7 @@ const std::string xdmf_header = R"(<?xml version ="1.0" ?>
 <Xdmf Version="2.0">
   <Domain>
 )";
-const std::string xdmf_body   = R"(
+const std::string xdmf_body_geometry = R"(
     <Grid Name="$GRID_NAME">
 
       <Topology TopologyType="Polyline" NodesPerElement="2" NumberOfElements="$POLYLINE_COUNT">
@@ -25,12 +25,30 @@ const std::string xdmf_body   = R"(
         </DataItem>
       </Geometry>
 
-      <Attribute Name="Colors" AttributeType="Vector" Center="Node">
-        <DataItem Dimensions="$VERTEX_ARRAY_SIZE" NumberType="UChar" Precision="1" Format="HDF">
+      <Attribute Name="Colors" AttributeType="$COLOR_ATTRIBUTE_TYPE" Center="Node">
+        <DataItem Dimensions="$COLOR_ARRAY_SIZE" NumberType="$COLOR_ARRAY_TYPE" Precision="$COLOR_PRECISION" Format="HDF">
           $FILEPATH:/$COLORS_DATASET_NAME
         </DataItem>
       </Attribute>
 
+    </Grid>
+)";
+const std::string xdmf_body_volume = R"(
+    <Grid Name="Grid" GridType="Uniform">
+      <Topology TopologyType="3DCoRectMesh" NumberOfElements="$SIZE"/>
+      <Geometry GeometryType="ORIGIN_DXDYDZ">
+        <DataItem Dimensions="3" NumberType="Float" Precision="4" Format="XML">
+          $ORIGIN
+        </DataItem>
+        <DataItem Dimensions="3" NumberType="Float" Precision="4" Format="XML">
+          $SPACING
+        </DataItem>
+      </Geometry>
+      <Attribute Name="Volume" AttributeType="Scalar" Center="Node">
+        <DataItem Dimensions="$SIZE" NumberType="Float" Precision="4" Format="HDF">
+          $FILEPATH:/$DATASET_NAME
+        </DataItem>
+      </Attribute>
     </Grid>
 )";
 const std::string xdmf_footer = R"(
