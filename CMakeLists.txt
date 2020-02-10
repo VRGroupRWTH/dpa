@@ -12,7 +12,7 @@ set_max_warning_level ()
 ##################################################    Options     ##################################################
 option(BUILD_TESTS "Build tests." OFF)
 option(DPA_FTLE_SUPPORT "Build with FTLE support (i.e. particle gathering and grid remapping)." ON)
-option(DPA_SCOREP_SUPPORT "Build with SCORE-P support (i.e. performance benchmarking)." ON)
+option(DPA_SCOREP_SUPPORT "Build with SCORE-P support (i.e. performance benchmarking)." OFF)
 
 if   (DPA_FTLE_SUPPORT)
 list (APPEND PROJECT_COMPILE_DEFINITIONS -DDPA_FTLE_SUPPORT)
