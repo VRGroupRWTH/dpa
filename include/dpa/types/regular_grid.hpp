@@ -11,6 +11,7 @@
 
 #include <dpa/math/permute_for.hpp>
 #include <dpa/types/basic_types.hpp>
+#include <dpa/utility/multi_array.hpp>
 
 namespace dpa
 {
@@ -172,7 +173,11 @@ struct regular_grid
   // Scalar-only operator.
   hessian_type          hessian            ()
   {
-    return gradient().gradient(); // In generalized formulation of the gradient, transpose is omitted.
+    auto first_gradient  = gradient();
+    first_gradient .normalize();
+    auto second_gradient = first_gradient.gradient();
+    second_gradient.normalize();
+    return second_gradient; // In generalized formulation of the gradient, transpose is omitted.
   }
   // Scalar-only operator.
   laplacian_type        laplacian          ()
@@ -191,6 +196,7 @@ struct regular_grid
   structure_tensor_type structure_tensor   (const index_type& window_size)
   {
     auto gradient_grid = gradient();
+    gradient_grid.normalize();
 
     structure_tensor_type outer_product_grid {structure_tensor_type::container_type(reinterpret_cast<index_type const&>(*data.shape())), offset, size, spacing};
     gradient_grid     .apply       ([&] (const index_type& index, typename gradient_type::element_type& element)
@@ -202,25 +208,44 @@ struct regular_grid
     outer_product_grid.apply_window([&] (const index_type& index, typename structure_tensor_type::element_type& element, typename structure_tensor_type::array_view_type& elements)
     {
       structure_tensor.data(index).setZero();
-
-      index_type start_index; start_index.fill(0);
-      index_type end_index  = window_size;
-      index_type increment  ; increment  .fill(1);
-      permute_for<index_type>([&] (const index_type& relative_index)
+      dpa::iterate(elements, [&] (const typename structure_tensor_type::element_type& iteratee)
       {
-        structure_tensor.data(index).array() += (elements(relative_index).array() / elements.num_elements()); // TODO: Adjustable weights instead of 1/elements?
-      }, start_index, end_index, increment);  
+        structure_tensor.data(index).array() += (iteratee.array() / elements.num_elements()); // TODO: Adjustable weights instead of 1/elements?
+      });
     }, window_size);
 
     return structure_tensor;
   }
+  // Vector/tensor-only operator.
+  void                  normalize          ()
+  {
+    apply([ ] (const index_type& index, element_type& element)
+    {
+      scalar norm = element.norm();
+      if (norm != 0) 
+        element /= norm;
+    });
+  }
   // Tensor-only operator.
   void                  orient_eigenvectors(const index_type& window_size)
   {
-    apply_window([&](const index_type& index, element_type& element, array_view_type& elements)
+    apply_window([&] (const index_type& index, element_type& element, array_view_type& elements)
     {
-      
-    });
+      Eigen::MatrixXf eigenvector_matrix;
+      eigenvector_matrix.resize(dimensions, elements.num_elements());
+      auto counter = 0;
+      dpa::iterate(elements, [&] (const element_type& iteratee)
+      {
+        auto neighborhood_svd = iteratee.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
+        eigenvector_matrix.col(counter++) = neighborhood_svd.matrixU().col(0);
+      });
+
+      auto composite_svd = eigenvector_matrix.jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
+      auto local_svd     = element           .jacobiSvd(Eigen::ComputeFullU | Eigen::ComputeFullV);
+      element *= local_svd.matrixV();
+      if (composite_svd.matrixU().col(0).dot(local_svd.matrixU().col(0)) < 0)
+        element = -element; // Race condition?
+    }, window_size);
   }
 
   container_type data    {};
