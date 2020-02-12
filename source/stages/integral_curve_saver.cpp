@@ -18,7 +18,7 @@ namespace dpa
 {
 integral_curve_saver::integral_curve_saver (domain_partitioner* partitioner, const std::string& filepath) 
 : partitioner_(partitioner)
-, filepath_   (std::filesystem::path(filepath).replace_extension(".rank_" + std::to_string(partitioner_->cartesian_communicator()->rank()) + ".h5").string())
+, filepath_   (std::filesystem::path(filepath).replace_extension(".rank_" + std::to_string(partitioner_->cartesian_communicator()->rank()) + "_lines.h5").string())
 {
 
 }
@@ -63,7 +63,7 @@ void integral_curve_saver::save(const integral_curves& integral_curves)
     H5Dclose(colors_dataset  );
     H5Dclose(indices_dataset );
     
-    auto& xdmf = xdmf_bodies.emplace_back(xdmf_body_geometry);
+    auto& xdmf = xdmf_bodies.emplace_back(xdmf_body_lines);
     boost::replace_all(xdmf, "$FILEPATH"             , std::filesystem::path(filepath_).filename().string());
     boost::replace_all(xdmf, "$GRID_NAME"            , "grid_" + std::to_string(curve_index));   
     boost::replace_all(xdmf, "$VERTICES_DATASET_NAME", vertices_name);

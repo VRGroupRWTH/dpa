@@ -10,7 +10,7 @@ const std::string xdmf_header = R"(<?xml version ="1.0" ?>
 <Xdmf Version="2.0">
   <Domain>
 )";
-const std::string xdmf_body_geometry = R"(
+const std::string xdmf_body_lines = R"(
     <Grid Name="$GRID_NAME">
 
       <Topology TopologyType="Polyline" NodesPerElement="2" NumberOfElements="$POLYLINE_COUNT">
