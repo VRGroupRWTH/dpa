@@ -43,7 +43,7 @@ void point_cloud_saver::save(const point_cloud& point_cloud)
   
   auto xdmf = xdmf_body_points;
   boost::replace_all(xdmf, "$FILEPATH"            , std::filesystem::path(filepath_).filename().string());
-  boost::replace_all(xdmf, "$VERTEX_COUNT"        , point_cloud.vertices.size());
+  boost::replace_all(xdmf, "$VERTEX_COUNT"        , std::to_string(point_cloud.vertices.size()));
   boost::replace_all(xdmf, "$VERTEX_ARRAY_SIZE"   , std::to_string(vertex_element_count));
   boost::replace_all(xdmf, "$COLOR_ARRAY_SIZE"    , std::to_string(color_element_count ));
   boost::replace_all(xdmf, "$COLOR_ATTRIBUTE_TYPE", use_scalar_colors ? "Scalar" : "Vector");
