@@ -10,7 +10,22 @@ const std::string xdmf_header = R"(<?xml version ="1.0" ?>
 <Xdmf Version="2.0">
   <Domain>
 )";
-const std::string xdmf_body_geometry = R"(
+const std::string xdmf_body_points = R"(
+    <Grid Name="Grid">
+      <Topology TopologyType="Polyvertex" NodesPerElement="1" NumberOfElements="$VERTEX_COUNT" />
+      <Geometry GeometryType="XYZ">
+        <DataItem Dimensions="$VERTEX_ARRAY_SIZE" NumberType="Float" Precision="4" Format="HDF">
+          $FILEPATH:/vertices
+        </DataItem>
+      </Geometry>
+      <Attribute Name="Colors" AttributeType="$COLOR_ATTRIBUTE_TYPE" Center="Node">
+        <DataItem Dimensions="$COLOR_ARRAY_SIZE" NumberType="$COLOR_ARRAY_TYPE" Precision="$COLOR_PRECISION" Format="HDF">
+          $FILEPATH:/colors
+        </DataItem>
+      </Attribute>
+    </Grid>
+)";
+const std::string xdmf_body_lines = R"(
     <Grid Name="$GRID_NAME">
 
       <Topology TopologyType="Polyline" NodesPerElement="2" NumberOfElements="$POLYLINE_COUNT">
