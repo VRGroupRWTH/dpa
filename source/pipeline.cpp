@@ -39,7 +39,7 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
       arguments.particle_advector_load_balancer      , 
       arguments.particle_advector_integrator         ,
       arguments.particle_advector_step_size          ,
-      arguments.particle_advector_gather_particles   ,
+      arguments.ftle                                 ,
       arguments.particle_advector_record             );
 
     auto vector_fields = std::unordered_map<relative_direction, regular_vector_field_3d>();
@@ -182,14 +182,14 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     recorder.record("8.estimate_ftle"          , [&] ()
     {
       // Note: FTLE requires stride (i.e. regular seed generation).
-      if (arguments.estimate_ftle)
+      if (arguments.ftle)
         ftle_field = ftle_estimator::estimate(vector_fields.at(center), arguments.seed_generation_iterations, arguments.seed_generation_stride.value(), arguments.particle_advector_step_size, output.inactive_particles);
     });
     partitioner.cartesian_communicator()->barrier();
     std::cout    << "9.save_ftle_field\n";
     recorder.record("9.save_ftle_field"        , [&] ()
     {
-      if (arguments.estimate_ftle)
+      if (arguments.ftle)
         regular_grid_saver(&partitioner, arguments.output_dataset_filepath).save(ftle_field.value());
     });
   }, 1);

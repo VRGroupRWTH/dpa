@@ -22,9 +22,8 @@ struct arguments
   std::string             particle_advector_load_balancer      ;
   std::string             particle_advector_integrator         ;
   scalar                  particle_advector_step_size          ;
-  bool                    particle_advector_gather_particles   ;
   bool                    particle_advector_record             ;
-  bool                    estimate_ftle                        ;
+  bool                    ftle                                 ;
   std::string             output_dataset_filepath              ;
 };
 }

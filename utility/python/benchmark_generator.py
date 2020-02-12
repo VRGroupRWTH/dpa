@@ -79,7 +79,7 @@ def generate(
   configuration["particle_advector_step_size"          ] = 0.001
   configuration["particle_advector_gather_particles"   ] = True
   configuration["particle_advector_record"             ] = True
-  configuration["estimate_ftle"                        ] = True
+  configuration["ftle"                                 ] = True
   configuration["output_dataset_filepath"              ] = name + ".h5"
   with open("../config/" + name + ".json", 'w') as file:
     json.dump(configuration, file, indent=2)
