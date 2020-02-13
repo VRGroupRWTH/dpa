@@ -43,7 +43,7 @@ regular_scalar_field_3d ftle_estimator::estimate(
   });
   
   auto flow_map_gradient = flow_map.gradient();
-  flow_map_gradient.apply([&] (const std::array<std::size_t, 3>& index, const matrix3& value)
+  flow_map_gradient.apply_parallel([&] (const std::array<std::size_t, 3>& index, const matrix3& value)
   {
     // Compute the spectral norm (right Cauchy-Green tensor).
     const matrix3 right_cauchy_green = value.transpose().eval() * value;
