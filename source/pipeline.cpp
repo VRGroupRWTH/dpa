@@ -96,45 +96,45 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
           boundaries   );
     });
 
+    particle_advector::state       state       = {vector_fields, particles, partitioner.partitions()};
+    particle_advector::round_state round_state = particle_advector::round_state(partitioner.partitions());
+    particle_advector::output      output      = {};
+    integer                        rounds      = 0;
+    bool                           complete    = false;
     partitioner.cartesian_communicator()->barrier();
-    particle_advector::state  state    = {vector_fields, particles, partitioner.partitions()};
-    particle_advector::output output   = {};
-    integer                   rounds   = 0;
-    bool                      complete = false;
     while (!complete)
     {
-      particle_advector::round_state round_state(partitioner.partitions());
-      std::cout    << "4.1." + std::to_string(rounds) + ".load_balance_distribute\n";
+      //std::cout    << "4.1." + std::to_string(rounds) + ".load_balance_distribute\n";
       recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
       {
                      advector.load_balance_distribute (state);
       });
-      std::cout    << "4.2." + std::to_string(rounds) + ".compute_round_state\n";
+      //std::cout    << "4.2." + std::to_string(rounds) + ".compute_round_state\n";
       recorder.record("4.2." + std::to_string(rounds) + ".compute_round_state"      , [&] ()
       {
         round_state = advector.compute_round_state    (state);
       });
-      std::cout    << "4.3." + std::to_string(rounds) + ".allocate_integral_curves\n";
+      //std::cout    << "4.3." + std::to_string(rounds) + ".allocate_integral_curves\n";
       recorder.record("4.3." + std::to_string(rounds) + ".allocate_integral_curves", [&] ()
       {
                      advector.allocate_integral_curves(       round_state, output);
       });
-      std::cout    << "4.4." + std::to_string(rounds) + ".advect\n";
+      //std::cout    << "4.4." + std::to_string(rounds) + ".advect\n";
       recorder.record("4.4." + std::to_string(rounds) + ".advect"                  , [&] ()
       {
                      advector.advect                  (state, round_state, output);
       });
-      std::cout    << "4.5." + std::to_string(rounds) + ".load_balance_collect\n";
+      //std::cout    << "4.5." + std::to_string(rounds) + ".load_balance_collect\n";
       recorder.record("4.5." + std::to_string(rounds) + ".load_balance_collect"    , [&] ()
       {
                      advector.load_balance_collect    (state, round_state, output);
       });
-      std::cout    << "4.6." + std::to_string(rounds) + ".out_of_bounds_distribute\n";
+      //std::cout    << "4.6." + std::to_string(rounds) + ".out_of_bounds_distribute\n";
       recorder.record("4.6." + std::to_string(rounds) + ".out_of_bounds_distribute", [&] ()
       {
                      advector.out_of_bounds_distribute(state, round_state);
       });
-      std::cout    << "4.7." + std::to_string(rounds) + ".check_completion\n";
+      //std::cout    << "4.7." + std::to_string(rounds) + ".check_completion\n";
       recorder.record("4.7." + std::to_string(rounds) + ".check_completion"        , [&] ()
       {
         complete =   advector.check_completion        (state);
