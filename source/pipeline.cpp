@@ -107,8 +107,8 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     {
       while (!complete)
       {
-        recorder.set   ("4." + std::to_string(rounds) + ".particle_count", state.total_active_particle_count());
-        recorder.record("4." + std::to_string(rounds) + ".time"          , [&] ()
+        recorder.set   ("4." + std::to_string(rounds) + ".load", state.total_active_particle_count());
+        recorder.record("4." + std::to_string(rounds) + ".time", [&] ()
         {
                         advector.load_balance_distribute (state);
           round_state = advector.compute_round_state     (state);
