@@ -58,7 +58,7 @@ def generate(
   configuration["seed_generation_stride"               ] = [seed_stride[0], seed_stride[1], seed_stride[2]]
   configuration["seed_generation_iterations"           ] = "1000"
   configuration["seed_generation_boundaries"           ] = boundaries
-  configuration["particle_advector_particles_per_round"] = "100000000"
+  configuration["particle_advector_particles_per_round"] = "10000000"
   configuration["particle_advector_load_balancer"      ] = load_balancer_full
   configuration["particle_advector_integrator"         ] = "runge_kutta_4"
   configuration["particle_advector_step_size"          ] = 0.001
