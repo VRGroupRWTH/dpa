@@ -1,5 +1,21 @@
 import csv
 
+# Format:
+# [
+#   {rank, name          , iteration_0},
+#   {0   , "total_time"  , 789.0      },
+#   {0   , "round.0.load", 420        },
+#   {0   , "round.0.time", 123.4      },
+#   {0   , "round.1.load", 210        },
+#   {0   , "round.1.time", 456.4      },
+#   ...
+#   {1   , "total_time"  , 789.0      },
+#   {1   , "round.0.load", 420        },
+#   {1   , "round.0.time", 123.4      },
+#   {1   , "round.1.load", 210        },
+#   {1   , "round.1.time", 456.4      },
+#   ...
+# ]
 def parse_csv(filepath):
   rows = []
   with open(filepath, mode='r') as csv_file:
