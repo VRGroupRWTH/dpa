@@ -11,6 +11,8 @@ void index_generator::generate(integral_curves& integral_curves, const bool use_
 {
   for (auto& curve : integral_curves)
   {
+    if (curve.vertices.empty()) continue;
+
     use_64_bit
       ? curve.indices = std::vector<std::uint64_t>(2 * curve.vertices.size(), std::numeric_limits<std::uint64_t>::max())
       : curve.indices = std::vector<std::uint32_t>(2 * curve.vertices.size(), std::numeric_limits<std::uint32_t>::max());
