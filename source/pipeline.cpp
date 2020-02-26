@@ -117,7 +117,11 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
           // partitioner.cartesian_communicator()->barrier();
           // std::cout << "advect\n";
                         advector.advect                  (state, round_state, output);
-                        
+                     
+          // partitioner.cartesian_communicator()->barrier();
+          // std::cout <<"prune_integral_curves\n";
+                        advector.prune_integral_curves   (                    output);
+   
           // partitioner.cartesian_communicator()->barrier();
           // std::cout << "load_balance_collect\n";
                         advector.load_balance_collect    (state, round_state, output);
@@ -130,9 +134,6 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
           // std::cout << "check_completion\n";
           complete    = advector.check_completion        (state);
           
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout <<"prune_integral_curves\n";
-                        advector.prune_integral_curves   (                    output);
           rounds++;
         });
       }
@@ -142,9 +143,6 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     std::cout << "gather_particles\n";
     advector.gather_particles(output);
 
-    std::cout << "prune_integral_curves\n";
-    advector.prune_integral_curves(output);
-    
     std::cout << "index_generation\n";
     if (arguments.particle_advector_record)
       index_generator::generate(output.integral_curves, arguments.particle_advector_particles_per_round * arguments.seed_generation_iterations > std::numeric_limits<std::uint32_t>::max());

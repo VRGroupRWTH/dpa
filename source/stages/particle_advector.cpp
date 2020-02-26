@@ -399,6 +399,13 @@ void                           particle_advector::advect                  (     
     particle_index_offset += particle_count;
   }
 }
+void                           particle_advector::prune_integral_curves   (                                                    output& output) 
+{
+  if (!record_) return;
+
+  auto& curves = output.integral_curves.back().vertices;
+  curves.erase(std::remove(curves.begin(), curves.end(), invalid_value<vector3>()), curves.end());
+}
 void                           particle_advector::load_balance_collect    (      state& state,       round_state& round_state, output& output) 
 {
   if (load_balancer_ == load_balancer::none) return;
@@ -492,15 +499,5 @@ void                           particle_advector::gather_particles        (     
 #else
   std::cout << "Particles are not gathered since original ranks are unavailable. Declare DPA_FTLE_SUPPORT and rebuild." << std::endl;
 #endif
-}
-void                           particle_advector::prune_integral_curves   (                                                    output& output) 
-{
-  if (!record_) return;
-  
-  tbb::parallel_for(std::size_t(0), output.integral_curves.size(), std::size_t(1), [&] (const std::size_t index)
-  {
-    auto& curves = output.integral_curves[index].vertices;
-    curves.erase(std::remove(curves.begin(), curves.end(), invalid_value<vector3>()), curves.end());
-  });
 }
 }

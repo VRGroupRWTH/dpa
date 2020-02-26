@@ -99,7 +99,7 @@ def generate_load_balancing(
   Path(prefix).mkdir(parents=True, exist_ok=True)
   for l in load_balancers:
     for f in dataset_filepaths:
-      generate(prefix, 128, l, f, 0.5, [2, 2, 2])
+      generate(prefix, 64, l, f, 0.5, [2, 2, 2])
 
 def generate_parameter_space(
   nodes             ,
@@ -110,7 +110,7 @@ def generate_parameter_space(
   seed_strides      ):
   default_dataset      = "/hpcwork/rwth0432/data/oregon/astro_1024.h5"
   default_distribution = 1.0
-  default_stride       = [4, 4, 4]
+  default_stride       = [8, 8, 8]
 
   prefix = "../config/parameter_space/dataset_complexity/"
   Path(prefix).mkdir(parents=True, exist_ok=True)
