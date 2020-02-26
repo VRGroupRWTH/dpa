@@ -4,8 +4,7 @@ import os
 from pathlib import Path
 
 # $1: configuration name 
-# $2: application filepath 
-# $3: number of nodes
+# $2: number of nodes
 script_template = """#!/bin/bash
 #SBATCH --job-name=$1
 #SBATCH --output=$1.log
@@ -17,97 +16,138 @@ script_template = """#!/bin/bash
 #SBATCH --cores-per-socket=12
 #SBATCH --cpus-per-task=48
 #SBATCH --account=rwth0432
-module swap intelmpi openmpi/4.0.2
+module unload intelmpi
 module load gcc/9 cmake/3.13.2
-$MPIEXEC $FLAGS_MPI_BATCH $2 $1.json
+/hpcwork/rwth0432/source/dpa/build/vcpkg/installed/x64-linux/bin/mpiexec $FLAGS_MPI_BATCH --mca btl_openib_allow_ib 1 /hpcwork/rwth0432/source/dpa/build/dpa $1.json
 """
 
-def human_format(number):
-  units = ['', 'k', 'm', 'g', 't', 'p']
-  k = 1000.0
-  magnitude = int(floor(log(number, k)))
-  return '%.2f%s' % (number / k**magnitude, units[magnitude])
-
 def generate(
-  nodes                  ,
-  input_dataset_filepath ,
-  stride                 ,
-  iterations             ,
-  boundaries             ,
-  particles_per_round    ,
-  load_balancer          ):
-  load_balancer_shorthand = "none"
-  if (load_balancer == "diffuse_constant"):
-    load_balancer_shorthand = "const"
-  if (load_balancer == "diffuse_lesser_average"):
-    load_balancer_shorthand = "lma"
-  if (load_balancer == "diffuse_greater_limited_lesser_average"):
-    load_balancer_shorthand = "gllma"
-  
-  name = (Path(input_dataset_filepath).resolve().stem + 
-    "_n_"   + str(nodes)  + 
-    "_s_"   + str(stride[0]) + ","
-            + str(stride[1]) + ","
-            + str(stride[2]) +
-    "_i_"   + str(human_format(int(iterations)))  + 
-    "_b_"   + str(boundaries["minimum"][0]) + ","
-            + str(boundaries["minimum"][1]) + ","
-            + str(boundaries["minimum"][2]) + ","
-            + str(boundaries["maximum"][0]) + ","
-            + str(boundaries["maximum"][1]) + ","
-            + str(boundaries["maximum"][2]) +
-    "_ppr_" + str(human_format(int(particles_per_round))) + 
-    "_lb_"  + load_balancer_shorthand)
+  prefix           ,
+  nodes            ,
+  load_balancer    ,
+  dataset_filepath ,
+  seed_distribution,
+  seed_stride      ):
 
-  script = (script_template.
-    replace("$1", name).
-    replace("$2", "/hpcwork/rwth0432/source/dpa/build/dpa").
-    replace("$3", str(nodes)))
-  with open("../config/" + name + ".sh", 'w') as file:
+  load_balancer_full = "none"
+  if (load_balancer == "const"):
+    load_balancer_full = "diffuse_constant"
+  if (load_balancer == "lma"):
+    load_balancer_full = "diffuse_lesser_average"
+  if (load_balancer == "gllma"):
+    load_balancer_full = "diffuse_greater_limited_lesser_average"
+  
+  name = (Path(dataset_filepath).resolve().stem +
+    "_n_"  + str(nodes) + 
+    "_l_"  + load_balancer +
+    "_d_"  + str(seed_distribution) +
+    "_s_[" + str(seed_stride[0]) + "," + str(seed_stride[1]) + "," + str(seed_stride[2])) + "]"
+
+  half_distribution = seed_distribution / 2.0
+  boundaries = [{
+    "minimum": [0.5 - half_distribution, 0.5 - half_distribution, 0.5 - half_distribution],
+    "maximum": [0.5 + half_distribution, 0.5 + half_distribution, 0.5 + half_distribution]}]
+
+  script = script_template.replace("$1", name).replace("$2", str(nodes))
+  with open(prefix + name + ".sh", 'w') as file:
     file.write(script)
 
   configuration = {}
-  configuration["input_dataset_filepath"               ] = input_dataset_filepath
+  configuration["input_dataset_filepath"               ] = dataset_filepath
   configuration["input_dataset_name"                   ] = "Data3"
   configuration["input_dataset_spacing_name"           ] = "spacing"
-  configuration["seed_generation_stride"               ] = [stride[0], stride[1], stride[2]]
-  configuration["seed_generation_iterations"           ] = iterations
+  configuration["seed_generation_stride"               ] = [seed_stride[0], seed_stride[1], seed_stride[2]]
+  configuration["seed_generation_iterations"           ] = 1000
   configuration["seed_generation_boundaries"           ] = boundaries
-  configuration["particle_advector_particles_per_round"] = particles_per_round
-  configuration["particle_advector_load_balancer"      ] = load_balancer
+  configuration["particle_advector_particles_per_round"] = "100000000"
+  configuration["particle_advector_load_balancer"      ] = load_balancer_full
   configuration["particle_advector_integrator"         ] = "runge_kutta_4"
   configuration["particle_advector_step_size"          ] = 0.001
-  configuration["particle_advector_gather_particles"   ] = True
+  configuration["particle_advector_gather_particles"   ] = False
   configuration["particle_advector_record"             ] = True
-  configuration["estimate_ftle"                        ] = True
+  configuration["estimate_ftle"                        ] = False
   configuration["output_dataset_filepath"              ] = name + ".h5"
-  with open("../config/" + name + ".json", 'w') as file:
+  with open(prefix + name + ".json", 'w') as file:
     json.dump(configuration, file, indent=2)
 
-def combine(
-  nodes                  ,
-  input_dataset_filepath ,
-  stride                 ,
-  iterations             ,
-  boundaries             ,
-  particles_per_round    ,
-  load_balancer          ):
+def generate_strong_scaling(
+  nodes            ,
+  load_balancers   ,
+  dataset_filepaths):
+  prefix = "../config/strong_scaling/"
+  Path(prefix).mkdir(parents=True, exist_ok=True)
   for n in nodes: 
-    for d in input_dataset_filepath:
-      for s in stride:
-        for i in iterations:
-          for b in boundaries:
-            for ppr in particles_per_round:
-              for lb in load_balancer:
-                generate(n, d, s, i, b, ppr, lb)
+    for l in load_balancers:
+      for f in dataset_filepaths:
+        generate(prefix, n, l, f, 1.0, [1, 1, 1])
 
-Path("../config").mkdir(parents=True, exist_ok=True)
-combine(
-  [32, 64, 128, 256],
-  ["/hpcwork/rwth0432/data/oregon/astro.h5", "/hpcwork/rwth0432/data/oregon/fishtank.h5", "/hpcwork/rwth0432/data/oregon/fusion.h5"],
-  [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8]],
-  ["1000", "10000"],
-  [{"minimum": [0.4, 0.4, 0.4], "maximum": [0.6, 0.6, 0.6]}],
-  ["10000000", "100000000"],
-  ["none", "diffuse_constant", "diffuse_lesser_average", "diffuse_greater_limited_lesser_average"]
-)
+def generate_weak_scaling(
+  nodes            ,
+  load_balancers   ,
+  dataset_filepaths,
+  strides          ):
+  prefix = "../config/weak_scaling/"
+  Path(prefix).mkdir(parents=True, exist_ok=True)
+  for i, n in enumerate(nodes): 
+    for l in load_balancers:
+      for f in dataset_filepaths:
+        generate(prefix, n, l, f, 1.0, strides[i])
+
+def generate_load_balancing(
+  load_balancers   ,
+  dataset_filepaths):
+  prefix = "../config/load_balancing/"
+  Path(prefix).mkdir(parents=True, exist_ok=True)
+  for l in load_balancers:
+    for f in dataset_filepaths:
+      generate(prefix, 128, l, f, 0.5, [0.5, 0.5, 0.5])
+
+def generate_parameter_space(
+  nodes             ,
+  load_balancers    ,
+  dataset_filepaths ,
+  dataset_scales    ,
+  seed_distributions,
+  seed_strides      ):
+  default_dataset      = "/hpcwork/rwth0432/data/oregon/astro_1024.h5"
+  default_distribution = 1.0
+  default_stride       = [1, 1, 1]
+
+  prefix = "../config/parameter_space/dataset_complexity/"
+  Path(prefix).mkdir(parents=True, exist_ok=True)
+  for n in nodes: 
+    for l in load_balancers:
+      for f in dataset_filepaths:
+        generate(prefix, n, l, f, default_distribution, default_stride)
+
+  prefix = "../config/parameter_space/dataset_size/"
+  Path(prefix).mkdir(parents=True, exist_ok=True)
+  for n in nodes: 
+    for l in load_balancers:
+      for s in dataset_scales:
+        generate(prefix, n, l, s, default_distribution, default_stride)
+        
+  prefix = "../config/parameter_space/seed_distribution/"
+  Path(prefix).mkdir(parents=True, exist_ok=True)
+  for n in nodes: 
+    for l in load_balancers:
+      for d in seed_distributions:
+        generate(prefix, n, l, default_dataset, d, default_stride)
+
+  prefix = "../config/parameter_space/seed_size/"
+  Path(prefix).mkdir(parents=True, exist_ok=True)
+  for n in nodes: 
+    for l in load_balancers:
+      for s in seed_strides:
+        generate(prefix, n, l, default_dataset, default_distribution, s)
+
+nodes             = [16, 32, 64, 128]
+load_balancers    = ["none", "const", "lma", "gllma"]
+dataset_filepaths = ["/hpcwork/rwth0432/data/oregon/astro_1024.h5", "/hpcwork/rwth0432/data/oregon/fishtank_1024.h5", "/hpcwork/rwth0432/data/oregon/fusion_1024.h5"]
+dataset_scales    = ["/hpcwork/rwth0432/data/oregon/astro_1024.h5", "/hpcwork/rwth0432/data/oregon/astro_1536.h5"   , "/hpcwork/rwth0432/data/oregon/astro_2048.h5" ]
+distributions     = [1.0, 0.5, 0.25]
+strides           = [[2,2,2], [2,2,1], [2,1,1], [1,1,1]]
+generate_strong_scaling (nodes, load_balancers, dataset_filepaths)
+generate_weak_scaling   (nodes, load_balancers, dataset_filepaths, strides)
+generate_load_balancing (       load_balancers, dataset_filepaths)
+generate_parameter_space(nodes, load_balancers, dataset_filepaths, dataset_scales, distributions, strides)
