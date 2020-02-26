@@ -234,7 +234,7 @@ void                           particle_advector::load_balance_distribute (     
 
         requests.push_back(communicator->isend(neighbor.second.rank, 0, outgoing_particles));
 
-        std::cout << "Send " << outgoing_particles.size() << " particles to neighbor " << neighbor.first << "\n";
+        //std::cout << "Send " << outgoing_particles.size() << " particles to neighbor " << neighbor.first << "\n";
       } 
       for (auto& neighbor : neighbor_load_balancing_info)
       {
@@ -244,7 +244,7 @@ void                           particle_advector::load_balance_distribute (     
         auto& target_particles = state.load_balanced_active_particles[neighbor.first];
         target_particles.insert(target_particles.end(), incoming_particles.begin(), incoming_particles.end());
         
-        std::cout << "Recv " << incoming_particles.size() << " particles from neighbor " << neighbor.first << "\n";
+        //std::cout << "Recv " << incoming_particles.size() << " particles from neighbor " << neighbor.first << "\n";
       }   
       for (auto& request : requests)
         request.wait();
