@@ -133,9 +133,9 @@ struct regular_grid
 
           // TODO: Extend to 3rd+ order tensors via <unsupported/Eigen/CXX11/Tensor>.
           if constexpr (std::is_arithmetic<typename potential_type::element_type>::value)
-            potential.data(index) = potential.data(prev_index) + two_spacing[dimension] * potential_type::element_type((data(prev_index).col(dimension).array() + data(index).col(dimension).array()).value());
+            potential.data(index) = potential.data(prev_index) + two_spacing[dimension] * typename potential_type::element_type((data(prev_index).col(dimension).array() + data(index).col(dimension).array()).value());
           else                                           
-            potential.data(index) = potential.data(prev_index) + two_spacing[dimension] * potential_type::element_type( data(prev_index).col(dimension).array() + data(index).col(dimension).array());
+            potential.data(index) = potential.data(prev_index) + two_spacing[dimension] * typename potential_type::element_type( data(prev_index).col(dimension).array() + data(index).col(dimension).array());
         }, partial_start_index, partial_end_index, increment);
       }
       end_index[dimension] = shape[dimension];
