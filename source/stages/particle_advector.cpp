@@ -96,9 +96,15 @@ void                           particle_advector::load_balance_distribute (     
     if      (load_balancer_ == load_balancer::diffuse_constant)
     {
       // Alpha is  1 - 2 / (dimensions + 1) -> 0.5 for 3D.
+      auto remaining_particles = state.active_particles.size();
       for (auto& neighbor : neighbor_load_balancing_info)
+      {
         if (neighbor.second.particle_count < local_load_balancing_info.particle_count)
-          outgoing_counts[neighbor.first] = std::min(state.active_particles.size(), std::size_t((local_load_balancing_info.particle_count - neighbor.second.particle_count) * double(0.5)));
+        {
+          outgoing_counts[neighbor.first] = std::min(remaining_particles, std::size_t((local_load_balancing_info.particle_count - neighbor.second.particle_count) * double(0.5)));
+          remaining_particles -= outgoing_counts[neighbor.first];
+        }
+      }
     }
     else if (load_balancer_ == load_balancer::diffuse_lesser_average)
     {
