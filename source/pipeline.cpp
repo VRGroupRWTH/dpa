@@ -107,6 +107,8 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     {
       while (!complete)
       {
+        recorder.set   ("4.1." + std::to_string(rounds) + ".particle_count", state.total_active_particle_count());
+
         //std::cout    << "4.1." + std::to_string(rounds) + ".load_balance_distribute\n";
         recorder.record("4.1." + std::to_string(rounds) + ".load_balance_distribute" , [&] ()
         {
