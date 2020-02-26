@@ -14,9 +14,9 @@ script_template = """#!/bin/bash
 #SBATCH --cores-per-socket=12
 #SBATCH --cpus-per-task=48
 #SBATCH --account=rwth0432
-module swap intelmpi openmpi/4.0.2
+module unload intelmpi
 module load gcc/9 cmake/3.13.2
-$MPIEXEC $FLAGS_MPI_BATCH /hpcwork/rwth0432/source/dpa/build/dpa $1.json
+/hpcwork/rwth0432/source/dpa/build/vcpkg/installed/x64-linux/bin/mpiexec $FLAGS_MPI_BATCH --mca btl_openib_allow_ib 1 /hpcwork/rwth0432/source/dpa/build/dpa $1.json
 """
 
 def generate(filepath):
