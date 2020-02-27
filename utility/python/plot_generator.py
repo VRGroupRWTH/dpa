@@ -4,6 +4,7 @@ from bokeh.plotting import figure, output_file, show
 from bokeh.models   import Span, LinearAxis, Range1d
 import pprint
 import numpy as np
+import time
 
 import benchmark_parser
 
@@ -17,13 +18,13 @@ if __name__ == "__main__":
 
   #setting up folder information
 
-  fold = "D:/AAACTEMP/boenschmarks_ali/"
+  fold = "./boenschmarks_ali/"
   sscale = fold+"strong_scaling/"
   wscale = fold+"weak_scaling/"
   paramspace = fold+"parameter_space/"
   lbalance = fold+"load_balancing/"
 
-  
+  """
   fl1 = benchmark_parser.folderlist(sscale,["fusion_1024","const"])
   fl2 = benchmark_parser.folderlist(sscale,["fusion_1024","_gllma"])
   fl3 = benchmark_parser.folderlist(sscale,["fusion_1024","_lma"])
@@ -60,7 +61,7 @@ if __name__ == "__main__":
   plf2 = generate("fusion_1024 gllma",    fp2)
   plf3 = generate("fusion_1024 lma",      fp3)
   plf4 = generate("fusion_1024 none",     fp4)
-
+  
 
   plot = gridplot([[pla1, pla2, pla3, pla4],
                    [plf1, plf2, plf3, plf4],
@@ -68,8 +69,8 @@ if __name__ == "__main__":
 
   output_file("scaling.html")
   export_png(plot, filename="scaling.png")
-  show(plot)
-  
+  #show(plot)
+  """
   #plot1 = generate("astro_2014",benchmark_parser.parse_scaling_benchmarks(\
   # benchmark_parser.folderlist(sscale,"astro_1024")))
   #plot2 = generate("fusion_1024", benchmark_parser.parse_scaling_benchmarks(\
@@ -98,7 +99,7 @@ if __name__ == "__main__":
 
   # getting data
   balancedata = [benchmark_parser.parse_load_balancing_benchmark(f) \
-    for f in benchmark_parser.folderlist(lbalance,"astro")]
+    for f in benchmark_parser.folderlist(lbalance,["astro","gllma"])]
   
   test = balancedata[0]
   spanlines = []
@@ -133,6 +134,10 @@ if __name__ == "__main__":
   balanceplot.add_layout(LinearAxis(y_range_name="imbalance", axis_label="Loas Imbalance"), 'right')
   balanceplot.extra_y_ranges={"imbalance":Range1d(start=0,end=np.max(imbalance))}
   balanceplot.line(x=rounds,y=imbalance,color="black",y_range_name="imbalance")
+  
+  uniquefname = str(int(round(time.time() * 1000)))
+  export_png(balanceplot, filename="loadbalance_"+uniquefname+".png")
   show(balanceplot)
+  print("done")
   
   
