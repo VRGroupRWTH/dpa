@@ -1,1 +1,3 @@
 *build/*
+*config*
+*__pycache__*
