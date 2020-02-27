@@ -7,7 +7,7 @@ from pathlib import Path
 script_template = """#!/bin/bash
 #SBATCH --job-name=$1
 #SBATCH --output=$1.log
-#SBATCH --time=00:20:00
+#SBATCH --time=00:40:00
 #SBATCH --mem=128000M
 #SBATCH --nodes=$2
 #SBATCH --ntasks-per-node=1
