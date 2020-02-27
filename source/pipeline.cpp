@@ -102,39 +102,46 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
         recorder.set   ("round." + std::to_string(rounds) + ".load", state.total_active_particle_count());
         recorder.record("round." + std::to_string(rounds) + ".time", [&] ()
         {
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout << "load_balance_distribute\n";
-                        advector.load_balance_distribute (state);
-          
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout << "compute_round_state\n";
-          round_state = advector.compute_round_state     (state);
-          
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout << "allocate_integral_curves\n";
-                        advector.allocate_integral_curves(       round_state, output);
-          
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout << "advect\n";
-                        advector.advect                  (state, round_state, output);
-                     
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout <<"prune_integral_curves\n";
-                        advector.prune_integral_curves   (                    output);
-   
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout << "load_balance_collect\n";
-                        advector.load_balance_collect    (state, round_state, output);
-          
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout << "out_of_bounds_distribute\n";
-                        advector.out_of_bounds_distribute(state, round_state);
+          recorder.record("round." + std::to_string(rounds) + ".load_balancing_time", [&] ()
+          {
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout << "load_balance_distribute\n";
+                          advector.load_balance_distribute (state);
+          });
+          recorder.record("round." + std::to_string(rounds) + ".advection_time"     , [&] ()
+          {
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout << "compute_round_state\n";
+            round_state = advector.compute_round_state     (state);
+            
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout << "allocate_integral_curves\n";
+                          advector.allocate_integral_curves(       round_state, output);
+            
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout << "advect\n";
+                          advector.advect                  (state, round_state, output);
+                       
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout <<"prune_integral_curves\n";
+                          advector.prune_integral_curves   (                    output);
+          });
+          recorder.record("round." + std::to_string(rounds) + ".communication_time" , [&] ()
+          {
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout << "load_balance_collect\n";
+                          advector.load_balance_collect    (state, round_state, output);
+            
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout << "out_of_bounds_distribute\n";
+                          advector.out_of_bounds_distribute(state, round_state);
 
-          // partitioner.cartesian_communicator()->barrier();
-          // std::cout << "check_completion\n";
-          complete    = advector.check_completion        (state);
-          
-          rounds++;
+            // partitioner.cartesian_communicator()->barrier();
+            // std::cout << "check_completion\n";
+            complete    = advector.check_completion        (state);
+            
+            rounds++;
+          });
         });
       }
     });
