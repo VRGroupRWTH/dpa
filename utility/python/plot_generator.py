@@ -11,7 +11,8 @@ class auto_resize_list(list):
 """Format:
 {
   maximum_time: ...
-  ranks       : [ # Array ordered by ranks.
+  ranks       : 
+  [ # Array ordered by ranks.
     {
       total_time: ...
       rounds    :
@@ -25,31 +26,34 @@ class auto_resize_list(list):
     ...
   ]
 }"""
-def parse_csv(filepath):
-  maximum_time = 0.0
-  ranks        = auto_resize_list()
+def parse_benchmark(filepath):
+  benchmark = {"maximum_time": 0.0, "ranks": auto_resize_list()}
+
   with open(filepath, mode='r') as csv_file:
     csv_reader = csv.DictReader(csv_file)
+    
     for row in csv_reader:
       rank  = int  (row["rank"])
       name  =       row["name"]
       value = float(row["iteration 0"])
       
-      if rank >= len(ranks): 
-        ranks[rank] = {"rounds": auto_resize_list()}
+      if rank >= len(benchmark["ranks"]): # Order dependent.
+        benchmark["ranks"][rank] = {"rounds": auto_resize_list()} 
 
       if name == "total_time":
-        ranks[rank]["total_time"] = value
-        if (maximum_time < value):
-          maximum_time = value
+        benchmark["ranks"][rank]["total_time"] = value
+        benchmark["maximum_time"] = max(benchmark["maximum_time"], value)
       else:
         split_name  = name.split(".")
         round_index = int(split_name[1])
         value_type  =     split_name[2]
-        if round_index >= len(ranks[rank]["rounds"]):
-          ranks[rank]["rounds"][round_index] = {}
-        ranks[rank]["rounds"][round_index][value_type] = value
-  return {"maximum_time": maximum_time, "ranks": ranks}
+      
+        if round_index >= len(benchmark["ranks"][rank]["rounds"]): # Order dependent.
+          benchmark["ranks"][rank]["rounds"][round_index] = {} 
+      
+        benchmark["ranks"][rank]["rounds"][round_index][value_type] = value
+  
+  return benchmark
 
 """Format:
 {
@@ -58,22 +62,26 @@ def parse_csv(filepath):
   "speedups": [1    , 1.5  , 3    , 9    , ...]
 }
 """
-def parse_scaling_benchmarks(benchmarks):
+def parse_scaling_benchmarks(filepaths):
   scaling = {"nodes": [], "times": [], "speedups": []}
-  for benchmark in benchmarks:
-    time = parse_csv(benchmark)["maximum_time"]
-    scaling["nodes"   ].append(int(ntpath.basename(benchmark).split("_")[3]))
-    scaling["times"   ].append(time)
+
+  for filepath in filepaths:
+    time = parse_benchmark(filepath)["maximum_time"]
+  
+    scaling["nodes"].append(int(ntpath.basename(filepath).split("_")[3]))
+    scaling["times"].append(time)
+
     if (len(scaling["times"]) > 0):
       scaling["speedups"].append(scaling["times"][0] / time)
     else:
       scaling["speedups"].append(1)
+  
   return scaling
 
 """Format:
 [ # Array ordered by rounds.
   {
-    "boundary"      : ...,
+    "bound_time"    : ...,
     "load_imbalance": ...,
     "times"         :
     [ # Array ordered by ranks.
@@ -85,11 +93,38 @@ def parse_scaling_benchmarks(benchmarks):
   ...
 ]
 """
-def parse_load_balancing_benchmark(benchmark):
-  print("TODO") # TODO: Parse. Compute load imbalance.
+def parse_load_balancing_benchmark(filepath):
+  load_balancing = auto_resize_list()
+  
+  benchmark = parse_benchmark(filepath)
+
+  for rank_index, rank in enumerate(benchmark["ranks"]):
+    for round_index, round in enumerate(rank["rounds"]):
+
+      if round_index >= len(load_balancing): # Order dependent.
+        load_balancing[round_index] = {"bound_time": 0.0, "load_imbalance": 0.0, "times": auto_resize_list()} 
+
+      if rank_index >= len(load_balancing[round_index]["times"]): # Order dependent.
+        load_balancing[round_index]["times"][rank_index] = {
+          "load_balancing_time": round["load_balancing_time"],
+          "advection_time"     : round["advection_time"     ],
+          "communication_time" : round["communication_time" ]
+        }
+
+      load_balancing[round_index]["bound_time"] = max(load_balancing[round_index]["bound_time"], round["time"])
+  
+  for round_index, round in enumerate(load_balancing):
+    total   = 0.0
+    maximum = 0.0
+    for rank_index, rank in enumerate(round["times"]):
+      load    = benchmark["ranks"][rank_index]["rounds"][round_index]["load"]
+      total  += load
+      maximum = max(maximum, load)
+    load_balancing[round_index]["load_imbalance"] = maximum / (total / len(load_balancing))
+  return load_balancing
 
 if __name__ == "__main__":
-  ranks = parse_csv("C:/Users/demir/Desktop/astro_1024_n_16_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv")
+  ranks = parse_benchmark("C:/Users/demir/Desktop/astro_1024_n_16_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv")
   pprint.pprint(ranks)
 
   scaling_1 = parse_scaling_benchmarks([
@@ -108,7 +143,7 @@ if __name__ == "__main__":
   ])
   pprint.pprint(scaling_2)
  
-  load_balancing = parse_load_balancing_benchmark([
+  load_balancing = parse_load_balancing_benchmark(
     "C:/Users/demir/Desktop/astro_1024_n_128_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv"
-  ])
+  )
   pprint.pprint(load_balancing)
