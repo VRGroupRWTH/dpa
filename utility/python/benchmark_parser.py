@@ -1,12 +1,26 @@
 import csv
 import ntpath
 import pprint
+import os
 
 class auto_resize_list(list):
   def __setitem__(self, index, value):
     if index >= len(self):
       self.extend([None] * (index + 1 - len(self)))
     list.__setitem__(self, index, value)
+
+"""
+Using Folder marcher from os for filtering
+"""
+
+def folderlist(folder, dataset) :
+  prefix = folder if folder[len(folder)-1]=="/" else folder+"/"
+  if isinstance(dataset,str) :
+    sets = [(prefix+f) for f in os.listdir(folder) if ".csv" in f and dataset in f]
+  else :
+    sets = [(prefix+f) for f in os.listdir(folder) if ".csv" in f and all(d in f for d in dataset)]
+  sets.sort()
+  return sets
 
 """Format:
 {
