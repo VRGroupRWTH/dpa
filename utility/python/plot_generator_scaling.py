@@ -1,9 +1,12 @@
 from bokeh.io import export_png
 from bokeh.layouts import gridplot
 from bokeh.plotting import figure, output_file, show
+from bokeh.models import Range1d
 import pprint
 
 import benchmark_parser
+
+maximum_y = 0.0
 
 def create_strong_scaling_filepaths(template, algorithms, node_counts):
   algorithm_filepaths = []
@@ -24,17 +27,22 @@ def create_weak_scaling_filepaths  (template, algorithms, node_counts, strides):
   return algorithm_filepaths
 
 def generate(name, composite_benchmark):
-  plot = figure(title=name, x_axis_label='Processes', y_axis_label='Time', sizing_mode="scale_height") 
+  global maximum_y
+  plot = figure(title=name, x_axis_label='Processes', y_axis_label='Time', sizing_mode="scale_height", x_range=list(map(str, composite_benchmark["benchmarks"][0]["nodes"])))
   for index, benchmark in enumerate(composite_benchmark["benchmarks"]):
-    plot.line(benchmark["nodes"], benchmark["times"], line_width=1, legend_label=composite_benchmark["names"][index], line_color=composite_benchmark["colors"][index])
+    plot.line(list(map(str, benchmark["nodes"])), benchmark["times"], line_width=1, legend_label=composite_benchmark["names"][index], line_color=composite_benchmark["colors"][index])
+    maximum_y = max(maximum_y, max(benchmark["times"]))
   plot.legend.location = "bottom_right"
+  plot.legend.background_fill_alpha = 0.0
   return plot
 
 def generate_scaling_figure():
+  global maximum_y
   algorithms = ["none" , "const", "lma"  , "gllma"]
   colors     = ["black", "red"  , "green", "blue" ]
   nodes      = [16, 32, 64, 128]
   strides    = ["8,8,8", "8,8,4", "8,4,4", "4,4,4"]
+  maximum_y  = 0.0
 
   astro_strong = generate(
     "Strong Scaling - Astrophysics", 
@@ -74,17 +82,26 @@ def generate_scaling_figure():
       colors,
       create_weak_scaling_filepaths("../benchmarks/weak_scaling/fusion_1024_n_$2_l_$1_d_1.0_s_$3.h5.benchmark.csv"         , algorithms, nodes, strides)))
 
-  return gridplot([
+  grid = [
     [astro_strong, fishtank_strong, fusion_strong], 
-    [astro_weak  , fishtank_weak  , fusion_weak  ]], toolbar_location=None)
+    [astro_weak  , fishtank_weak  , fusion_weak  ]]
+
+  for row in grid:
+    for entry in row:
+      entry.y_range=Range1d(0, maximum_y)
+
+  return gridplot(grid, toolbar_location=None)
 
 def generate_parameter_space_figure():
+  global maximum_y
+
   algorithms         = ["none" , "const", "lma"  , "gllma"]
   colors             = ["black", "red"  , "green", "blue" ]
   nodes              = [16, 32, 64, 128]
   strides            = ["8,8,8", "8,8,4", "8,4,4", "4,4,4"]
   size_scale_strides = ["8,8,8", "12,12,12", "16,16,16"]
   dist_scale_strides = ["8,8,8", "4,4,4", "2,2,2"]
+  maximum_y          = 0.0
 
   data_complexity_astro = generate(
     "Data Complexity - Astrophysics", 
@@ -162,11 +179,17 @@ def generate_parameter_space_figure():
       colors,
       create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_stride/astro_1024_n_$2_l_$1_d_1.0_s_8,4,4.h5.benchmark.csv", algorithms, nodes)))
   
-  return gridplot([
+  grid = [
    [data_complexity_astro, data_complexity_fishtank, data_complexity_fusion],
    [data_size_1024       , data_size_1536          , data_size_2048        ],  # Scales stride.
    [seed_distribution_1  , seed_distribution_05    , seed_distribution_025 ],  # Scales stride.
-   [seed_set_888         , seed_set_884            , seed_set844           ]], toolbar_location=None)
+   [seed_set_888         , seed_set_884            , seed_set844           ]]
+
+  for row in grid:
+    for entry in row:
+      entry.y_range=Range1d(0, maximum_y)
+
+  return gridplot(grid, toolbar_location=None)
 
 if __name__ == "__main__":
   plot = generate_scaling_figure()

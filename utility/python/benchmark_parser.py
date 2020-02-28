@@ -66,7 +66,7 @@ def parse_scaling_benchmarks(filepaths):
   scaling = {"nodes": [], "times": [], "speedups": []}
 
   for filepath in filepaths:
-    time = parse_benchmark(filepath)["maximum_time"]
+    time = parse_benchmark(filepath)["maximum_time"] / 1000.0 # ms to s.
   
     scaling["nodes"].append(int(ntpath.basename(filepath).split("_")[3]))
     scaling["times"].append(time)
@@ -106,12 +106,12 @@ def parse_load_balancing_benchmark(filepath):
 
       if rank_index >= len(load_balancing[round_index]["times"]): # Order dependent.
         load_balancing[round_index]["times"][rank_index] = {
-          "load_balancing_time": round["load_balancing_time"],
-          "advection_time"     : round["advection_time"     ],
-          "communication_time" : round["communication_time" ]
+          "load_balancing_time": round["load_balancing_time"] / 1000.0, # ms to s.
+          "advection_time"     : round["advection_time"     ] / 1000.0, # ms to s.
+          "communication_time" : round["communication_time" ] / 1000.0  # ms to s.
         }
 
-      load_balancing[round_index]["bound_time"] = max(load_balancing[round_index]["bound_time"], round["time"])
+      load_balancing[round_index]["bound_time"] = max(load_balancing[round_index]["bound_time"], round["time"] / 1000.0) # ms to s.
   
   for round_index, round in enumerate(load_balancing):
     total   = 0.0
