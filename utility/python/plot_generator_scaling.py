@@ -24,7 +24,7 @@ def create_weak_scaling_filepaths  (template, algorithms, node_counts, strides):
   return algorithm_filepaths
 
 def generate(name, composite_benchmark):
-  plot = figure(title=name, x_axis_label='Nodes', y_axis_label='Time', sizing_mode="scale_height") 
+  plot = figure(title=name, x_axis_label='Processes', y_axis_label='Time', sizing_mode="scale_height") 
   for index, benchmark in enumerate(composite_benchmark["benchmarks"]):
     plot.line(benchmark["nodes"], benchmark["times"], line_width=1, legend_label=composite_benchmark["names"][index], line_color=composite_benchmark["colors"][index])
   plot.legend.location = "bottom_right"
