@@ -76,7 +76,7 @@ def generate_scaling_figure():
 
   return gridplot([
     [astro_strong, fishtank_strong, fusion_strong], 
-    [astro_weak  , fishtank_weak  , fusion_weak  ]])
+    [astro_weak  , fishtank_weak  , fusion_weak  ]], toolbar_location=None)
 
 def generate_parameter_space_figure():
   algorithms         = ["none" , "const", "lma"  , "gllma"]
@@ -166,7 +166,7 @@ def generate_parameter_space_figure():
    [data_complexity_astro, data_complexity_fishtank, data_complexity_fusion],
    [data_size_1024       , data_size_1536          , data_size_2048        ],  # Scales stride.
    [seed_distribution_1  , seed_distribution_05    , seed_distribution_025 ],  # Scales stride.
-   [seed_set_888         , seed_set_884            , seed_set844           ]])
+   [seed_set_888         , seed_set_884            , seed_set844           ]], toolbar_location=None)
 
 if __name__ == "__main__":
   plot = generate_scaling_figure()
