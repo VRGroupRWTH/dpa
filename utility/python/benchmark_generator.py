@@ -17,7 +17,7 @@ script_template = """#!/bin/bash
 #SBATCH --account=rwth0432
 module swap intelmpi openmpi/4.0.2
 module load gcc/9 cmake/3.13.2
-/hpcwork/rwth0432/source/dpa/build/vcpkg/installed/x64-linux/bin/mpiexec $FLAGS_MPI_BATCH --mca btl_openib_allow_ib 1 /hpcwork/rwth0432/source/dpa/build/dpa $1.json
+/hpcwork/rwth0432/source/dpa/build/vcpkg/installed/x64-linux/bin/mpiexec $FLAGS_MPI_BATCH --mca plm_rsh_no_tree_spawn 1 --mca btl_openib_allow_ib 1 /hpcwork/rwth0432/source/dpa/build/dpa $1.json
 """
 
 def generate(
