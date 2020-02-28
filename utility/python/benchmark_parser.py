@@ -1,6 +1,5 @@
 import csv
 import ntpath
-import pprint
 import os
 
 class auto_resize_list(list):
@@ -8,19 +7,6 @@ class auto_resize_list(list):
     if index >= len(self):
       self.extend([None] * (index + 1 - len(self)))
     list.__setitem__(self, index, value)
-
-"""
-Using Folder marcher from os for filtering
-"""
-
-def folderlist(folder, dataset) :
-  prefix = folder if folder[len(folder)-1]=="/" else folder+"/"
-  if isinstance(dataset,str) :
-    sets = [(prefix+f) for f in os.listdir(folder) if ".csv" in f and dataset in f]
-  else :
-    sets = [(prefix+f) for f in os.listdir(folder) if ".csv" in f and all(d in f for d in dataset)]
-  sets.sort()
-  return sets
 
 """Format:
 {
@@ -137,27 +123,21 @@ def parse_load_balancing_benchmark(filepath):
     load_balancing[round_index]["load_imbalance"] = maximum / (total / len(load_balancing))
   return load_balancing
 
-if __name__ == "__main__":
-  ranks = parse_benchmark("C:/Users/demir/Desktop/astro_1024_n_16_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv")
-  pprint.pprint(ranks)
-
-  scaling_1 = parse_scaling_benchmarks([
-    "C:/Users/demir/Desktop/astro_1024_n_16_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv",
-    "C:/Users/demir/Desktop/astro_1024_n_32_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv",
-    "C:/Users/demir/Desktop/astro_1024_n_64_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv",
-    "C:/Users/demir/Desktop/astro_1024_n_128_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv"
-  ])
-  pprint.pprint(scaling_1)
- 
-  scaling_2 = parse_scaling_benchmarks([
-    "C:/Users/demir/Desktop/fusion_1024_n_16_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv",
-    "C:/Users/demir/Desktop/fusion_1024_n_32_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv",
-    "C:/Users/demir/Desktop/fusion_1024_n_64_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv",
-    "C:/Users/demir/Desktop/fusion_1024_n_128_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv"
-  ])
-  pprint.pprint(scaling_2)
- 
-  load_balancing = parse_load_balancing_benchmark(
-    "C:/Users/demir/Desktop/astro_1024_n_128_l_gllma_d_1.0_s_4,4,4.h5.benchmark.csv"
-  )
-  pprint.pprint(load_balancing)
+"""Format:
+{
+  "names"     : ["none" , "const", "lma", "gllma"],
+  "colors"    : ["black", "blue" , "red", "green"],
+  "benchmarks": # 16 measurements for 4 algorithms and 4 node counts.
+  [
+    scaling_benchmark(),
+    scaling_benchmark(),
+    scaling_benchmark(),
+    scaling_benchmark()
+  ]
+}
+"""
+def create_composite_scaling_benchmarks(names, colors, benchmark_filepaths):
+  composite_benchmark = {"names": names, "colors": colors, "benchmarks": []}
+  for filepaths in benchmark_filepaths:
+    composite_benchmark["benchmarks"].append(parse_scaling_benchmarks(filepaths)) # Order has to be the same as names.
+  return composite_benchmark

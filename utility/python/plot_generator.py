@@ -8,6 +8,18 @@ import time
 
 import benchmark_parser
 
+"""
+Using Folder marcher from os for filtering
+"""
+def folderlist(folder, dataset) :
+  prefix = folder if folder[len(folder)-1]=="/" else folder+"/"
+  if isinstance(dataset,str) :
+    sets = [(prefix+f) for f in os.listdir(folder) if ".csv" in f and dataset in f]
+  else :
+    sets = [(prefix+f) for f in os.listdir(folder) if ".csv" in f and all(d in f for d in dataset)]
+  sets.sort()
+  return sets
+
 def generate(name, data):
   #pprint.pprint(data)
   plot = figure(title=name, x_axis_label='Nodes', y_axis_label='Time', sizing_mode="scale_height")
@@ -25,18 +37,18 @@ if __name__ == "__main__":
   lbalance = fold+"load_balancing/"
 
   """
-  fl1 = benchmark_parser.folderlist(sscale,["fusion_1024","const"])
-  fl2 = benchmark_parser.folderlist(sscale,["fusion_1024","_gllma"])
-  fl3 = benchmark_parser.folderlist(sscale,["fusion_1024","_lma"])
-  fl4 = benchmark_parser.folderlist(sscale,["fusion_1024","none"])
-  il1 = benchmark_parser.folderlist(sscale,["fishtank_1024","const"])
-  il2 = benchmark_parser.folderlist(sscale,["fishtank_1024","_gllma"])
-  il3 = benchmark_parser.folderlist(sscale,["fishtank_1024","_lma"])
-  il4 = benchmark_parser.folderlist(sscale,["fishtank_1024","none"])
-  al1 = benchmark_parser.folderlist(sscale,["astro_1024","const"])
-  al2 = benchmark_parser.folderlist(sscale,["astro_1024","_gllma"])
-  al3 = benchmark_parser.folderlist(sscale,["astro_1024","_lma"])
-  al4 = benchmark_parser.folderlist(sscale,["astro_1024","none"])
+  fl1 = folderlist(sscale,["fusion_1024","const"])
+  fl2 = folderlist(sscale,["fusion_1024","_gllma"])
+  fl3 = folderlist(sscale,["fusion_1024","_lma"])
+  fl4 = folderlist(sscale,["fusion_1024","none"])
+  il1 = folderlist(sscale,["fishtank_1024","const"])
+  il2 = folderlist(sscale,["fishtank_1024","_gllma"])
+  il3 = folderlist(sscale,["fishtank_1024","_lma"])
+  il4 = folderlist(sscale,["fishtank_1024","none"])
+  al1 = folderlist(sscale,["astro_1024","const"])
+  al2 = folderlist(sscale,["astro_1024","_gllma"])
+  al3 = folderlist(sscale,["astro_1024","_lma"])
+  al4 = folderlist(sscale,["astro_1024","none"])
   ap1 = benchmark_parser.parse_scaling_benchmarks(al1)
   ap2 = benchmark_parser.parse_scaling_benchmarks(al2)
   ap3 = benchmark_parser.parse_scaling_benchmarks(al3)
@@ -72,11 +84,11 @@ if __name__ == "__main__":
   #show(plot)
   """
   #plot1 = generate("astro_2014",benchmark_parser.parse_scaling_benchmarks(\
-  # benchmark_parser.folderlist(sscale,"astro_1024")))
+  # folderlist(sscale,"astro_1024")))
   #plot2 = generate("fusion_1024", benchmark_parser.parse_scaling_benchmarks(\
-  #  benchmark_parser.folderlist(sscale,"fusion_1024")))
+  #  folderlist(sscale,"fusion_1024")))
   #plot3 = generate("fishtank_1024", benchmark_parser.parse_scaling_benchmarks(\
-  #  benchmark_parser.folderlist(sscale,"fishtank_1024")))
+  #  folderlist(sscale,"fishtank_1024")))
 
   #plot = row(plot1, plot2,plot3)
   #output_file("scaling.html")
@@ -99,7 +111,7 @@ if __name__ == "__main__":
 
   # getting data
   balancedata = [benchmark_parser.parse_load_balancing_benchmark(f) \
-    for f in benchmark_parser.folderlist(lbalance,["astro","gllma"])]
+    for f in folderlist(lbalance,["astro","gllma"])]
   
   test = balancedata[0]
   spanlines = []
