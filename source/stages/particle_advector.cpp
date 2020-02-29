@@ -366,7 +366,7 @@ void                           particle_advector::advect                  (     
           break;
         }
 
-        const auto system = [&] (const vector3& x, vector3& dxdt, const float t) { dxdt = vector; };
+        const auto system = [&] (const vector3& x, vector3& dxdt, const float t) { dxdt = vector3(vector[2], vector[1], vector[0]); }; // Data-spacific.
         if      (std::holds_alternative<euler_integrator<vector3>>                       (integrator))
           std::get<euler_integrator<vector3>>                       (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
         else if (std::holds_alternative<modified_midpoint_integrator<vector3>>           (integrator))
