@@ -95,77 +95,69 @@ def generate_scaling_figure():
 def generate_parameter_space_figure():
   global maximum_y
 
-  algorithms         = ["none" , "const", "lma"  , "gllma"]
-  colors             = ["black", "red"  , "green", "blue" ]
-  nodes              = [16, 32, 64, 128]
-  strides            = ["8,8,8", "8,8,4", "8,4,4", "4,4,4"]
-  size_scale_strides = ["8,8,8", "12,12,12", "16,16,16"]
-  dist_scale_strides = ["8,8,8", "4,4,4", "2,2,2"]
-  maximum_y          = 0.0
+  algorithms = ["none" , "const", "lma"  , "gllma"]
+  colors     = ["black", "red"  , "green", "blue" ]
+  nodes      = [16, 32, 64, 128]
+  strides    = ["8,8,8", "8,8,4", "8,4,4", "4,4,4"]
+  maximum_y  = 0.0
 
   data_complexity_astro = generate(
     "Data Complexity - Astrophysics", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_complexity/astro_1024_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv"   , algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_complexity/astro_1024_n_$2_l_$1_d_1.0_s_4,4,4.h5.benchmark.csv"   , algorithms, nodes)))
   data_complexity_fishtank = generate(
     "Data Complexity - Thermal Hydraulics", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_complexity/fishtank_1024_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv", algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_complexity/fishtank_1024_n_$2_l_$1_d_1.0_s_4,4,4.h5.benchmark.csv", algorithms, nodes)))
   data_complexity_fusion = generate(
     "Data Complexity - Nuclear Fusion", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_complexity/fusion_1024_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv"  , algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_complexity/fusion_1024_n_$2_l_$1_d_1.0_s_4,4,4.h5.benchmark.csv"  , algorithms, nodes)))
   
   data_size_1024 = generate(
     "Data Size - 1024^3", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_size/astro_1024_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv"   , algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_size/astro_1024_n_$2_l_$1_d_1.0_s_4,4,4.h5.benchmark.csv"   , algorithms, nodes)))
   data_size_1536 = generate(
     "Data Size - 1536^3", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_size/astro_1536_n_$2_l_$1_d_1.0_s_12,12,12.h5.benchmark.csv", algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_size/astro_1536_n_$2_l_$1_d_1.0_s_6,6,6.h5.benchmark.csv", algorithms, nodes)))
   data_size_2048 = generate(
     "Data Size - 2048^3", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_size/astro_2048_n_$2_l_$1_d_1.0_s_16,16,16.h5.benchmark.csv", algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/dataset_size/astro_2048_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv", algorithms, nodes)))
 
   seed_distribution_1 = generate(
     "Seed Distribution - 1.0", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv", algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_1.0_s_4,4,4.h5.benchmark.csv", algorithms, nodes)))
   seed_distribution_05 = generate(
     "Seed Distribution - 0.5", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_0.5_s_4,4,4.h5.benchmark.csv", algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_0.5_s_2,2,2.h5.benchmark.csv", algorithms, nodes)))
   seed_distribution_025 = generate(
     "Seed Distribution - 0.25", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_0.25_s_2,2,2.h5.benchmark.csv", algorithms, nodes)))
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_0.25_s_1,1,1.h5.benchmark.csv", algorithms, nodes)))
 
-  seed_set_888 = generate(
-    "Seed Set - [8, 8, 8]", 
-    benchmark_parser.create_composite_scaling_benchmarks(
-      algorithms, 
-      colors,
-      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_stride/astro_1024_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv", algorithms, nodes)))
   seed_set_884 = generate(
     "Seed Set - [8, 8, 4]", 
     benchmark_parser.create_composite_scaling_benchmarks(
@@ -178,12 +170,18 @@ def generate_parameter_space_figure():
       algorithms, 
       colors,
       create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_stride/astro_1024_n_$2_l_$1_d_1.0_s_8,4,4.h5.benchmark.csv", algorithms, nodes)))
+  seed_set_444 = generate(
+    "Seed Set - [4, 4, 4]", 
+    benchmark_parser.create_composite_scaling_benchmarks(
+      algorithms, 
+      colors,
+      create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_stride/astro_1024_n_$2_l_$1_d_1.0_s_4,4,4.h5.benchmark.csv", algorithms, nodes)))
   
   grid = [
    [data_complexity_astro, data_complexity_fishtank, data_complexity_fusion],
    [data_size_1024       , data_size_1536          , data_size_2048        ],  # Scales stride.
    [seed_distribution_1  , seed_distribution_05    , seed_distribution_025 ],  # Scales stride.
-   [seed_set_888         , seed_set_884            , seed_set_844          ]]
+   [seed_set_884         , seed_set_844            , seed_set_444          ]]
 
   for row in grid:
     for entry in row:

@@ -53,17 +53,17 @@ def generate_load_balancing_figure():
   global maximum_x
   global maximum_lif
 
-  template        = "../benchmarks/load_balancing/$2_1024_n_64_l_$1_d_0.5_s_2,2,2.h5.benchmark.csv"
+  template        = "../benchmarks/load_balancing/$2_1024_n_32_l_$1_d_0.5_s_2,2,2.h5.benchmark.csv"
   algorithms      = ["none", "const", "lma", "gllma"]
-  datasets        = ["astro", "fishtank" , "fusion" ]
+  datasets        = ["astro"]
   algorithm_names = ["None", "Constant", "LMA", "GLLMA"]
   dataset_names   = ["Astrophysics", "Thermal Hydraulics" , "Nuclear Fusion"]
   
   grid = []
-  for algorithm in algorithms:
+  for algorithm_index, algorithm in enumerate(algorithms):
     row = []
-    for index, dataset in enumerate(datasets):
-      row.append(generate(dataset_names[index] + " - " + algorithm_names[index], benchmark_parser.parse_load_balancing_benchmark(template.replace("$1", algorithm).replace("$2", dataset))))
+    for dataset_index, dataset in enumerate(datasets):
+      row.append(generate(dataset_names[dataset_index] + " - " + algorithm_names[algorithm_index], benchmark_parser.parse_load_balancing_benchmark(template.replace("$1", algorithm).replace("$2", dataset))))
     grid.append(row)
 
   for row in grid:
@@ -75,6 +75,6 @@ def generate_load_balancing_figure():
 
 if __name__ == "__main__":
   plot = generate_load_balancing_figure()
-  output_file("load_balancing.html")
-  export_png (plot, filename="load_balancing.png")
+  output_file("load_balancing_astro.html")
+  export_png (plot, filename="load_balancing_astro.png")
   show       (plot)

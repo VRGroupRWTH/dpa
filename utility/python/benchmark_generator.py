@@ -99,7 +99,7 @@ def generate_load_balancing(
   Path(prefix).mkdir(parents=True, exist_ok=True)
   for l in load_balancers:
     for f in dataset_filepaths:
-      generate(prefix, 64, l, f, 0.5, [2, 2, 2])
+      generate(prefix, 32, l, f, 0.5, [2, 2, 2])
 
 def generate_parameter_space(
   nodes                          ,
@@ -112,7 +112,7 @@ def generate_parameter_space(
   seed_strides                   ):
   default_dataset      = "/hpcwork/rwth0432/data/oregon/astro_1024.h5"
   default_distribution = 1.0
-  default_stride       = [8, 8, 8]
+  default_stride       = [4, 4, 4]
 
   prefix = "../config/parameter_space/dataset_complexity/"
   Path(prefix).mkdir(parents=True, exist_ok=True)
@@ -148,8 +148,8 @@ dataset_filepaths          = ["/hpcwork/rwth0432/data/oregon/astro_1024.h5", "/h
 dataset_scales             = ["/hpcwork/rwth0432/data/oregon/astro_1024.h5", "/hpcwork/rwth0432/data/oregon/astro_1536.h5"   , "/hpcwork/rwth0432/data/oregon/astro_2048.h5" ]
 distributions              = [1.0, 0.5, 0.25]
 strides                    = [[8,8,8], [8,8,4], [8,4,4], [4,4,4]]
-dataset_scale_strides      = [[8,8,8], [12,12,12], [16,16,16]]
-distribution_scale_strides = [[8,8,8], [4,4,4], [2,2,2]]
+dataset_scale_strides      = [[4,4,4], [6,6,6], [8,8,8]]
+distribution_scale_strides = [[4,4,4], [2,2,2], [1,1,1]]
 generate_strong_scaling (nodes, load_balancers, dataset_filepaths)
 generate_weak_scaling   (nodes, load_balancers, dataset_filepaths, strides)
 generate_load_balancing (       load_balancers, dataset_filepaths)
