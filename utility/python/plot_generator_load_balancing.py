@@ -13,7 +13,7 @@ def generate(name, load_balancing_benchmark):
   global maximum_x
   global maximum_lif
 
-  plot = figure(title=name, x_axis_label='Time', y_axis_label='Process Indices', sizing_mode="stretch_width")
+  plot = figure(title=name, x_axis_label='Time', y_axis_label='Process Indices', sizing_mode="fixed", plot_width=1024, plot_height=1024)
   plot.yaxis.major_tick_line_color      = None
   plot.yaxis.minor_tick_line_color      = None
   plot.yaxis.major_label_text_font_size = '12pt'

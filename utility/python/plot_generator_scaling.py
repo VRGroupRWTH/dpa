@@ -28,7 +28,7 @@ def create_weak_scaling_filepaths  (template, algorithms, node_counts, strides):
 
 def generate(name, composite_benchmark):
   global maximum_y
-  plot = figure(title=name, x_axis_label='Processes', y_axis_label='Time', sizing_mode="scale_height", x_range=list(map(str, composite_benchmark["benchmarks"][0]["nodes"])))
+  plot = figure(title=name, x_axis_label='Processes', y_axis_label='Time', sizing_mode="fixed", x_range=list(map(str, composite_benchmark["benchmarks"][0]["nodes"])), plot_width=1024, plot_height=1024)
   for index, benchmark in enumerate(composite_benchmark["benchmarks"]):
     plot.line(list(map(str, benchmark["nodes"])), benchmark["times"], line_width=1, legend_label=composite_benchmark["names"][index], line_color=composite_benchmark["colors"][index])
     maximum_y = max(maximum_y, max(benchmark["times"]))
@@ -147,13 +147,13 @@ def generate_parameter_space_figure():
       algorithms, 
       colors,
       create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_1.0_s_8,8,8.h5.benchmark.csv", algorithms, nodes)))
-  seed_distribution_1 = generate(
+  seed_distribution_05 = generate(
     "Seed Distribution - 0.5", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
       colors,
       create_strong_scaling_filepaths("../benchmarks/parameter_space/seed_distribution/astro_1024_n_$2_l_$1_d_0.5_s_4,4,4.h5.benchmark.csv", algorithms, nodes)))
-  seed_distribution_1 = generate(
+  seed_distribution_025 = generate(
     "Seed Distribution - 0.25", 
     benchmark_parser.create_composite_scaling_benchmarks(
       algorithms, 
@@ -183,7 +183,7 @@ def generate_parameter_space_figure():
    [data_complexity_astro, data_complexity_fishtank, data_complexity_fusion],
    [data_size_1024       , data_size_1536          , data_size_2048        ],  # Scales stride.
    [seed_distribution_1  , seed_distribution_05    , seed_distribution_025 ],  # Scales stride.
-   [seed_set_888         , seed_set_884            , seed_set844           ]]
+   [seed_set_888         , seed_set_884            , seed_set_844          ]]
 
   for row in grid:
     for entry in row:
