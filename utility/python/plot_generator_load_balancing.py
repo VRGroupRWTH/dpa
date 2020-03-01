@@ -53,7 +53,7 @@ def generate_load_balancing_figure():
   global maximum_x
   global maximum_lif
 
-  template        = "../benchmarks/load_balancing/$2_1024_n_32_l_$1_d_0.5_s_2,2,2.h5.benchmark.csv"
+  template        = "../benchmarks/load_balancing/$2_1024_n_16_l_$1_d_0.5_s_2,2,2.h5.benchmark.csv"
   algorithms      = ["none", "const", "lma", "gllma"]
   datasets        = ["astro"]
   algorithm_names = ["None", "Constant", "LMA", "GLLMA"]

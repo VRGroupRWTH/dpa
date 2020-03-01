@@ -99,7 +99,7 @@ def generate_load_balancing(
   Path(prefix).mkdir(parents=True, exist_ok=True)
   for l in load_balancers:
     for f in dataset_filepaths:
-      generate(prefix, 32, l, f, 0.5, [2, 2, 2])
+      generate(prefix, 16, l, f, 0.5, [2, 2, 2])
 
 def generate_parameter_space(
   nodes                          ,
