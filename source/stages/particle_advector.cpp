@@ -96,9 +96,15 @@ void                           particle_advector::load_balance_distribute (     
     if      (load_balancer_ == load_balancer::diffuse_constant)
     {
       // Alpha is  1 - 2 / (dimensions + 1) -> 0.5 for 3D.
+      auto remaining_particles = state.active_particles.size();
       for (auto& neighbor : neighbor_load_balancing_info)
+      {
         if (neighbor.second.particle_count < local_load_balancing_info.particle_count)
-          outgoing_counts[neighbor.first] = std::min(state.active_particles.size(), std::size_t((local_load_balancing_info.particle_count - neighbor.second.particle_count) * double(0.5)));
+        {
+          outgoing_counts[neighbor.first] = std::min(remaining_particles, std::size_t((local_load_balancing_info.particle_count - neighbor.second.particle_count) * double(0.5)));
+          remaining_particles -= outgoing_counts[neighbor.first];
+        }
+      }
     }
     else if (load_balancer_ == load_balancer::diffuse_lesser_average)
     {
@@ -234,7 +240,7 @@ void                           particle_advector::load_balance_distribute (     
 
         requests.push_back(communicator->isend(neighbor.second.rank, 0, outgoing_particles));
 
-        std::cout << "Send " << outgoing_particles.size() << " particles to neighbor " << neighbor.first << "\n";
+        //std::cout << "Send " << outgoing_particles.size() << " particles to neighbor " << neighbor.first << "\n";
       } 
       for (auto& neighbor : neighbor_load_balancing_info)
       {
@@ -244,7 +250,7 @@ void                           particle_advector::load_balance_distribute (     
         auto& target_particles = state.load_balanced_active_particles[neighbor.first];
         target_particles.insert(target_particles.end(), incoming_particles.begin(), incoming_particles.end());
         
-        std::cout << "Recv " << incoming_particles.size() << " particles from neighbor " << neighbor.first << "\n";
+        //std::cout << "Recv " << incoming_particles.size() << " particles from neighbor " << neighbor.first << "\n";
       }   
       for (auto& request : requests)
         request.wait();
@@ -360,7 +366,7 @@ void                           particle_advector::advect                  (     
           break;
         }
 
-        const auto system = [&] (const vector3& x, vector3& dxdt, const float t) { dxdt = vector; };
+        const auto system = [&] (const vector3& x, vector3& dxdt, const float t) { dxdt = vector3(vector[2], vector[1], vector[0]); }; // Data-spacific.
         if      (std::holds_alternative<euler_integrator<vector3>>                       (integrator))
           std::get<euler_integrator<vector3>>                       (integrator).do_step(system, particle.position, iteration_index * step_size_, step_size_);
         else if (std::holds_alternative<modified_midpoint_integrator<vector3>>           (integrator))
@@ -392,6 +398,13 @@ void                           particle_advector::advect                  (     
     particle_vector.get().resize(particle_vector.get().size() - particle_count);
     particle_index_offset += particle_count;
   }
+}
+void                           particle_advector::prune_integral_curves   (                                                    output& output) 
+{
+  if (!record_) return;
+
+  auto& curves = output.integral_curves.back().vertices;
+  curves.erase(std::remove(curves.begin(), curves.end(), invalid_value<vector3>()), curves.end());
 }
 void                           particle_advector::load_balance_collect    (      state& state,       round_state& round_state, output& output) 
 {
@@ -486,15 +499,5 @@ void                           particle_advector::gather_particles        (     
 #else
   std::cout << "Particles are not gathered since original ranks are unavailable. Declare DPA_FTLE_SUPPORT and rebuild." << std::endl;
 #endif
-}
-void                           particle_advector::prune_integral_curves   (                                                    output& output) 
-{
-  if (!record_) return;
-  
-  tbb::parallel_for(std::size_t(0), output.integral_curves.size(), std::size_t(1), [&] (const std::size_t index)
-  {
-    auto& curves = output.integral_curves[index].vertices;
-    curves.erase(std::remove(curves.begin(), curves.end(), invalid_value<vector3>()), curves.end());
-  });
 }
 }

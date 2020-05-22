@@ -23,6 +23,8 @@ std::vector<particle_3d> uniform_seed_generator::generate       (vector3 offset,
       offset = intersection.min  ();
       size   = intersection.sizes();
     }
+    else
+      return std::vector<particle_3d>();
   }
 
   svector3 particles_per_dimension = (size.array() / stride.array()).cast<dpa::size>();
@@ -51,6 +53,8 @@ std::vector<particle_3d> uniform_seed_generator::generate_random(vector3 offset,
       offset = intersection.min  ();
       size   = intersection.sizes();
     }
+    else
+      return std::vector<particle_3d>();
   }
 
   auto distribution_range = std::initializer_list

@@ -20,23 +20,7 @@ namespace dpa
 {
 template <typename type = double>
 struct record
-{
-  type        mean              ()                             
-  {
-    return std::accumulate(values.begin(), values.end(), type(0)) / values.size();
-  }
-  type        variance          ()                            
-  {
-    auto m = mean();
-    std::vector<type> differences(values.size());
-    std::transform(values.begin(), values.end(), differences.begin(), [m] (const type& value) { return value - m; });
-    return std::inner_product(differences.begin(), differences.end(), differences.begin(), type(0)) / values.size();
-  }
-  type        standard_deviation()                            
-  {
-    return std::sqrt(variance());
-  }
-                                                              
+{                                                    
   std::string to_string         ()                            
   {
     std::ostringstream stream;
@@ -44,7 +28,6 @@ struct record
     stream << name << ",";
     for (auto& value : values)
       stream << value << ",";
-    stream << mean() << "," << variance() << "," << standard_deviation();
     return stream.str();
   }
   void        to_csv            (const std::string& filepath) 
@@ -53,8 +36,7 @@ struct record
     stream << "name,";
     for (auto i = 0; i < values.size(); ++i)
       stream << "iteration " << i << ",";
-    stream << "mean,variance,standard deviation\n";
-    stream << to_string();
+    stream << "\n" << to_string();
   }
 
   std::string       name  ;
@@ -79,8 +61,7 @@ struct session
     stream << "name,";
     for (auto i = 0; i < records[0].values.size(); ++i)
       stream << "iteration " << i << ",";
-    stream << "mean,variance,standard deviation\n";
-    stream << to_string();
+    stream << "\n" << to_string();
   }
 
   std::vector<record<type>> records;
@@ -131,8 +112,7 @@ public:
     stream << "rank,name,";
     for (auto i = 0; i < session<type>::records[0].values.size(); ++i)
       stream << "iteration " << i << ",";
-    stream << "mean,variance,standard deviation\n";
-    stream << to_string();
+    stream << "\n" << to_string();
   }
   
 protected:
@@ -157,13 +137,9 @@ public:
   virtual ~session_recorder  ()                              = default;
   session_recorder& operator=(const session_recorder&  that) = delete ;
   session_recorder& operator=(      session_recorder&& temp) = default;
-  
-  void record(const std::string& name, const std::function<void()>& function)
-  {
-    const auto start = std::chrono::high_resolution_clock::now();
-    function();
-    const auto end   = std::chrono::high_resolution_clock::now();
 
+  void set   (const std::string& name, const type value)
+  {
     auto record = std::find_if(session_.records.begin(), session_.records.end(),
       [&name] (const dpa::record<type>& record) { return record.name == name; });
     if (record == session_.records.end())
@@ -171,7 +147,14 @@ public:
       session_.records.push_back({name, {std::vector<type>(iterations_)}});
       record = std::prev(session_.records.end());
     }
-    record->values[index_] = std::chrono::duration<type, period>(end - start).count();
+    record->values[index_] = value;
+  }
+  void record(const std::string& name, const std::function<void()>& function)
+  {
+    const auto start = std::chrono::high_resolution_clock::now();
+    function();
+    const auto end   = std::chrono::high_resolution_clock::now();
+    set(name, std::chrono::duration<type, period>(end - start).count());
   }
 
 protected:

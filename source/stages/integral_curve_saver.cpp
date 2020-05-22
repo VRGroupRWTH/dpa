@@ -80,6 +80,9 @@ void integral_curve_saver::save(const integral_curves& integral_curves)
   }
   H5Fclose(file);
 
+  if (xdmf_bodies.empty())
+    return;
+
   std::ofstream stream(filepath_ + ".xdmf");
   stream << xdmf_header << std::accumulate(xdmf_bodies.begin(), xdmf_bodies.end(), std::string("")) << xdmf_footer;
 }

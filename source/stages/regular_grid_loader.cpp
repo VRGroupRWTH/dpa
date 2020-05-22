@@ -64,7 +64,7 @@ std::unordered_map<relative_direction, regular_vector_field_3d> regular_grid_loa
 
 regular_vector_field_3d                                         regular_grid_loader::load_vector_field (const svector3& offset, const svector3& size, hid_t dataset, hid_t spacing)
 {
-  regular_vector_field_3d vector_field {boost::multi_array<vector3, 3>(boost::extents[size[0]][size[1]][size[2]], boost::fortran_storage_order())}; // Beware: Storage order is specific to datasets.
+  regular_vector_field_3d vector_field {boost::multi_array<vector3, 3>(boost::extents[size[0]][size[1]][size[2]])};
 
   const std::array<hsize_t, 4> native_offset {hsize_t(offset[0]), hsize_t(offset[1]), hsize_t(offset[2]), 0};
   const std::array<hsize_t, 4> native_size   {hsize_t(size  [0]), hsize_t(size  [1]), hsize_t(size  [2]), 3};
