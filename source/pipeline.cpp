@@ -158,17 +158,17 @@ std::int32_t pipeline::run(std::int32_t argc, char** argv)
     if (arguments.particle_advector_record)
       color_generator::generate_from_angular_velocities(output.integral_curves);
 
-    //std::cout << "save_integral_curves\n";
-    //if (arguments.particle_advector_record)
-    //  integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save(output.integral_curves);
+    std::cout << "save_integral_curves\n";
+    if (arguments.particle_advector_record)
+      integral_curve_saver(&partitioner, arguments.output_dataset_filepath).save(output.integral_curves);
 
-    //std::cout << "estimate_ftle\n";
-    //if (arguments.estimate_ftle)
-    //  ftle_field = ftle_estimator::estimate(vector_fields.at(center), arguments.seed_generation_iterations, arguments.seed_generation_stride.value(), arguments.particle_advector_step_size, output.inactive_particles);
+    std::cout << "estimate_ftle\n";
+    if (arguments.estimate_ftle)
+      ftle_field = ftle_estimator::estimate(vector_fields.at(center), arguments.seed_generation_iterations, arguments.seed_generation_stride.value(), arguments.particle_advector_step_size, output.inactive_particles);
     
-    //std::cout << "save_ftle_field\n";
-    //if (arguments.estimate_ftle)
-    //  regular_grid_saver(&partitioner, arguments.output_dataset_filepath).save(ftle_field.value());
+    std::cout << "save_ftle_field\n";
+    if (arguments.estimate_ftle)
+      regular_grid_saver(&partitioner, arguments.output_dataset_filepath).save(ftle_field.value());
   }, 1);
   benchmark_session.gather();
   benchmark_session.to_csv(arguments.output_dataset_filepath + ".benchmark.csv");
